@@ -1,0 +1,15 @@
+1. Make sure 'nova list' shows the instance as ACTIVE
+
+2. Check the console log of the instance for failures, especially DHCP and metadata.  For example, you should see a section like this:
+
+ci-info: lo    : 1 127.0.0.1       255.0.0.0       .
+ci-info: eth0  : 1 10.0.0.3        255.255.255.0   fa:16:3e:e4:fa:a6
+ci-info: route-0: 0.0.0.0         10.0.0.1        0.0.0.0         eth0   UG
+ci-info: route-1: 10.0.0.0        0.0.0.0         255.255.255.0   eth0   U
+
+No IP, or "route info failed" are bad.
+
+3. Run tcpdump in the various namespaces - router "qr" device, dhcp "ns" device and verify packets are being seen from the instance.  If not, run tcpdump right on the instance tap device.
+
+4. Look for any errors in the log files, especially the neutron ones.
+

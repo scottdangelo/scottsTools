@@ -1,0 +1,1 @@
+ansible-playbook -i hosts/verb_hosts site.yml -e elasticsearch_heap_size=256m -e logstash_heap_size=256m

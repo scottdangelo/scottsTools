@@ -1,0 +1,19 @@
+Steps to re-image the node
+1) Migrate service off the node
+2) Stop the STONITH service associated with the node
+) delete the node and client objects in the associated org in the chef server
+4) Trigger the re-image of the node via Holly (I'll do that when ready)
+5) Once the node has come back up it will re-join chef and have just Basenode as a run list - update the run list to the desired run list, e.g. add AW1Basenode and Bock-Single-Machine as roles
+6) run the following knife edb grants:
+knife edb grant icinga_rabbitmq amqp_wrapper_password_dev -q roles:Bock-Server-Base
+knife edb grant logaggr creds_dev -q roles:Bock-Server-Base
+7) Run this command in a checked out bock-chef repo
+./tools/bock_edb_grant --location dev_rdb_az1 --run_cmds
+ log in to the node and run chef-client (via chef-safe-run if you want, and just ignore the complaints about monit)
+ 
+ To set roles, log in to OpsCode:
+ https://chef-aw1.ops.uswest.hpcloud.net
+ Choose your environment
+ Got to the node
+ edit
+ add roles

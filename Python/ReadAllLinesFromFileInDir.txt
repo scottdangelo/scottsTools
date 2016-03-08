@@ -1,0 +1,8 @@
+def lines_from_dir(filepat, dirname):
+    names = gen_find(filepat,dirname)
+    files = gen_open(names)
+    lines = gen_cat(files)
+    return lines
+
+This is a generate purpose function that reads all
+lines from a series of files in a directory

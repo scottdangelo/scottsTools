@@ -1,0 +1,1 @@
+crash ~/LinuxSrc/debug_3_13_0-35/System.map-3.13.0-35-generic /usr/lib/debug/boot/vmlinux-3.13.0-35-generic ~/crashDump/dump.201410312108 

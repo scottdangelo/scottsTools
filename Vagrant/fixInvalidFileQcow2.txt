@@ -1,0 +1,12 @@
+~/GitRepos/vagrant-devstack$ sudo qemu-img  convert  -f raw -O qcow2  /var/lib/libvirt/images/devstack-150223_vagrant_box_image.img /var/lib/libvirt/images/devstack-150223_vagrant_box_image.qcow2
+
+
+to fix:
+==> devstack: Starting domain.
+There was an error talking to Libvirt. The error message is shown
+below:
+
+Call to virDomainCreateWithFlags failed: internal error process exited while connecting to monitor: char device redirected to /dev/pts/43
+kvm: -drive file=/var/lib/libvirt/images/vagrant-devstack_devstack.img,if=none,id=drive-virtio-disk0,format=qcow2: '' uses a qcow2 feature which is not supported by this qemu version: QCOW version 3
+kvm: -drive file=/var/lib/libvirt/images/vagrant-devstack_devstack.img,if=none,id=drive-virtio-disk0,format=qcow2: could not open disk image /var/lib/libvirt/images/vagrant-devstack_devstack.img: Operation not supported
+

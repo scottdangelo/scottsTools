@@ -1,0 +1,2 @@
+if you add a 2nd package to foo, you will need this as top line in debian/foo.install:
+usr/lib/python*/dist-packages/*

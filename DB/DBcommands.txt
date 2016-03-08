@@ -1,0 +1,3 @@
+sqlite3 <blah.db>
+.tables #shows tables
+.schema <table> #shows schema

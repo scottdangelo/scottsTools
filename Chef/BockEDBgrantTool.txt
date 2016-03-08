@@ -1,0 +1,22 @@
+~/GitRepos/bock-chef$ ./tools/bock_edb_grant --location dev_rdb_az1 --run_cmds
+Running Bock EDB Grant Tool
+Exec: knife edb grant bock bock_server_encrypted_dev_rdb_az1 -q roles:Bock-Server-Base
+Adding access to bock/bock_server_encrypted_dev_rdb_az1 for client nv-aw1rdb1-bock0003.rndb.aw1.hpcloud.net
+Adding access to bock/bock_server_encrypted_dev_rdb_az1 for client nv-aw1rdb1-bock0001.rndb.aw1.hpcloud.net
+Adding access to bock/bock_server_encrypted_dev_rdb_az1 for client nv-aw1rdb1-bock0002.rndb.aw1.hpcloud.net
+Adding access to bock/bock_server_encrypted_dev_rdb_az1 for client nv-aw1rdb1-bock0000.rndb.aw1.hpcloud.net
+
+Exec: knife edb grant bock bock_client_encrypted_dev_rdb_az1 -q roles:Bock-Base
+
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-bock0001.rndb.aw1.hpcloud.net
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-network0000.rndb.aw1.hpcloud.net
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-schedule0000.rndb.aw1.hpcloud.net
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-compute0000.rndb.aw1.hpcloud.net
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-bock0002.rndb.aw1.hpcloud.net
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-bock0003.rndb.aw1.hpcloud.net
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-compute0001.rndb.aw1.hpcloud.net
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-compute0002.rndb.aw1.hpcloud.net
+Adding access to bock/bock_client_encrypted_dev_rdb_az1 for client nv-aw1rdb1-bock0000.rndb.aw1.hpcloud.net
+
+Bock EDB Grant tool completed successfully
+

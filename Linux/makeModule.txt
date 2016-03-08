@@ -1,0 +1,1 @@
+unpacked with rpm2cpio <src-rpm> | cpio -idmv; cd to the hp-be2iscsi* dir and : KVER=$(uname -r) BLDDIR=/lib/modules/$KVER/build make -C $BLDDIR M=$PWD

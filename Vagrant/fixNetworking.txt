@@ -1,0 +1,32 @@
+brctl addif virbr0 eth1
+
+root@scott-HP-Z400-Workstation:/etc/network# virsh net-edit vagrant-libvirt
+rk>
+  <name>default</name>
+  <uuid>e416d302-2cda-f1fb-3439-87e26d15a0b4</uuid>
+  <forward mode='nat'/>
+  <bridge name='virbr0' stp='on' delay='0' />
+  <ip address='192.168.122.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.122.2' end='192.168.122.254' />
+    </dhcp>
+  </ip>
+</network>
+
+root@scott-HP-Z400-Workstation:/etc/network# virsh net-edit default
+
+
+<network>
+<name>vagrant-libvirt</name>
+<uuid>e4443b2f-aaf0-1b40-f72c-02226fa6ceb7</uuid>
+<forward mode='bridge'/>
+<bridge name='virbr1' />
+<mac address='52:54:00:B7:02:D8'/>
+<ip address='192.168.121.1' netmask='255.255.255.0'>
+<dhcp>
+  <range start='192.168.121.2' end='192.168.121.254' />
+</dhcp>
+</ip>
+</network>
+
+

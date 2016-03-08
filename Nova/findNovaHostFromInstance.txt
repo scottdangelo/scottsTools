@@ -1,0 +1,1 @@
+sudo -u nova  nova-manage vm list | grep <yourInstanceName>

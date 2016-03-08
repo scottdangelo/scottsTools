@@ -1,0 +1,41 @@
+ https://wiki.hpcloud.net/display/core/CoreEditionQAPage
+
+In general there is a HC room for each system
+For each system there is a Head node that stays static - everything else changes each install
+For R106 the head node is 10.22.170.17
+For R405 ssh cetest@10.22.157.148
+
+cetest/ceqa123
+
+Once you are on the head node . ./creds_under_admin for UC and . ./creds_over_admin for OC
+When you do the OC and "nova list" you will see the nodes and their IPs
+You might want to . ./test_venv/bin/activate first though
+You can log into the Horizon GUI at the IP found in ./creds_over_admin and using the creds in that file also
+
+Then . ./test_venv/bin/activate
+Then . ./creds_under_admin
+nova list will now show you the list of nodes and IPs in the system
+
+should also add that when you are on the head node and want to log into an OC node, you can ...
+ssh -i .ssh/seed_id_rsa heat-admin@<nodeIP>
+e..g. cetest@cer106n0001:~$ ssh -i .ssh/seed_id_rsa heat-admin@10.22.170.104
+
+followed by "sudo su -" and the logs are then in /var/log/upstart
+
+FOR RACK 106:
+~$ ssh cetest@10.22.170.17
+Warning: Permanently added '10.22.170.17' (ECDSA) to the list of known hosts.
+cetest@10.22.170.17's password: 
+Welcome to Ubuntu 13.10 (GNU/Linux 3.11.0-12-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com/
+Your Ubuntu release is not supported anymore.
+For upgrade information, please visit:
+http://www.ubuntu.com/releaseendoflife
+
+New release '14.04.1 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+Last login: Mon Sep 15 18:37:18 2014 from 10.8.48.92
+cetest@cer106n0001:~$ ssh -i ~/.ssh/seed_id_rsa heat-admin@10.22.170.100
+

@@ -1,0 +1,5 @@
+tox -e py27 -- --regex somethingsomethingtest    
+
+tox -epy27 -- --regex cinder.tests.unit.test_volume.VolumeTestCase.test_create_delete_consistencygroup
+
+tox -epy27 -- -n cinder.tests.unit.test_volume.VolumeTestCase.test_create_delete_consistencygroup

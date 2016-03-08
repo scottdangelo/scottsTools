@@ -1,0 +1,13 @@
+In order to get to a p2000 on the Galway network:
+need to go through vpn (HP) 
+1st ssh to samwise.ilo.cpqcorp.net from home laptop
+2nd goto lyncsys router (192.168.1.10 /admin) and allow port 22 forwarding to my linux workstation
+3rd reverse tunnel from samwise to my home linux workstation:
+    ssh -f -R 19999:localhost:22 scott@<my server>
+4th ssh with port forwarding to samwise from my home linux:
+    ssh -D 9000 dangelo@localhost -p 19999
+5th foxyproxy  host:localhost port: 9000 Socks proxy URL patter: *://192.168.11*
+6th in firefox connect to:
+ https://192.168.11.78
+
+ This connects, but times out very fast

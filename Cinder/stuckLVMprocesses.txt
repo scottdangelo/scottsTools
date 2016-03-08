@@ -1,0 +1,21 @@
+Sometimes, after running a bunch of cinder create-volumes in parallel (anecdotally this is easier to reproduce on a clear system), we see a bunch of stuck LVM processes, e.g.:
+
+root@overcloud-controllermgmt0-ws55j3shqblj:/var/log/cinder# ps -Ao pid,tt,user,fname,tmout,f,wchan | grep lv
+ 7601 ? root lvcreate - 4 flock_lock_file_wait
+ 10533 ? root lvcreate - 4 flock_lock_file_wait
+ 13098 ? root lvcreate - 4 flock_lock_file_wait
+ 13505 ? root lvcreate - 4 flock_lock_file_wait
+ 13552 ? root lvcreate - 4 flock_lock_file_wait
+ 16955 ? root lvs - 0 flock_lock_file_wait
+ 17227 ? root lvcreate - 4 flock_lock_file_wait
+ 19629 ? root lvcreate - 4 flock_lock_file_wait
+ 22434 ? root lvs - 0 flock_lock_file_wait
+ 23525 ? root lvcreate - 4 SYSC_semtimedop
+ 23732 ? root lvcreate - 4 flock_lock_file_wait
+ 27043 ? root lvcreate - 4 flock_lock_file_wait
+ 29726 ? root lvcreate - 4 flock_lock_file_wait
+ 29858 ? root lvs - 0 flock_lock_file_wait
+
+ One is waiting for the semaphore to be decremented, the others are queued up behind the flock held by that process.
+
+ Killing the process waiting for the semaphore, or running "dmsetup udevcomplete_all", causes the system to get unwedged

@@ -1,0 +1,28 @@
+With my patch, networking config looks like:
+
+root@overcloud-controller0-u6a324kklltm:~# ip route
+default via 192.0.2.1 dev br-ex 
+169.254.169.254 via 192.0.2.2 dev br-ex 
+192.0.2.0/24 dev br-ex  proto kernel  scope link  src 192.0.2.24 
+You have new mail in /var/mail/root
+
+and
+
+root@overcloud-controller0-u6a324kklltm:~# cat /etc/network/interfaces
+# interfaces(5) file used by ifup(8) and ifdown(8)
+# Include files from /etc/network/interfaces.d:
+source-directory /etc/network/interfaces.d
+auto br-ex
+allow-ovs br-ex
+ iface br-ex inet dhcp
+ pre-up ip addr flush dev eth0
+ ovs_type OVSBridge
+ ovs_ports eth0
+
+auto eth0
+allow-br-ex eth0
+ iface eth0 inet manual
+ ovs_bridge br-ex
+ ovs_type OVSPort
+
+

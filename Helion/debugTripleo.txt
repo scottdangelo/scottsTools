@@ -1,0 +1,36 @@
+@RP you log into the undercloud and look
+or if it is a jenkins job, you pull the sosreport logs
+so I sudo ssh root@192.0.2.1
+. stackrc
+nova list
+to get the undercloud ip
+then exit off the seed and
+sudo ssh heat-admin@<undercloud-ip>
+sudo su -
+. stackrc
+nova list
+grep ERROR /var/log/upstart
+etc ...
+Haneef Ali
+12:02 PM
+If nova list shows all the vms running , then do
+Rob Parker
+12:02 PM
+grep ERROR /var/log/upstart 
+the vms are running
+Haneef Ali
+12:02 PM
+heat resource-list overcloud
+Ritesh Shetty
+12:02 PM
+/var/log/upstart/heat-engine.log /var/log/upstart/heat-api.log /var/log/upstart/heat-api-cloudwatch.log
+Rob Parker
+12:03 PM
+cool thanks all, have some things to look at
+Ritesh Shetty
+12:04 PM
+also looks at the events
+heat event-list overcloud
+Haneef Ali
+12:04 PM
+heat resource-list overcloud --> will definitely show something has failed

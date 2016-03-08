@@ -1,0 +1,3 @@
+git review cmd you have to remember to specify the branch (e.g. git review -r gozer -R hp/stable/2.0) otherwise it tries to merge with master
+
+git review -r gozer -R hp/stable/2.0

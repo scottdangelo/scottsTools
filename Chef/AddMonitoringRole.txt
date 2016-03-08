@@ -1,0 +1,15 @@
+Monitoring role is owned by monitoring team.
+To add to a node use:
+knife node edit cr-aw1rde1-volman-0000.rnde.aw1.hpcloud.net
+
+and add the role to the run list:
+
+"run_list": [
+    "role[Basenode-Precise]",
+    "role[AW1Basenode]",
+    "role[Monitoring]",
+    "role[Monitoring-client]",
+    "role[Bock-Access]",
+    "role[Cinder-API]",
+    "role[Cinder-Scheduler]",
+    "role[Bock-VDM-Cleaner]"

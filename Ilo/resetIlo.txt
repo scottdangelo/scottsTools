@@ -1,0 +1,3 @@
+THis is untested by Scott:
+
+ipmitool mc reset cold

@@ -1,0 +1,68 @@
+Setup build env:
+sudo DEVTEST_LOCATION=galway bash -x ce-installer/tripleo/tripleo-incubator/scripts/hp_ced_build.sh
+can use:
+   --no-clone               -- Dont clone the required repos"
+   --no-image               -- Dont build images"
+   --update-image-cache     -- update any cached repos"
+
+
+Building the seed:
+export HP_VM_MODE=y
+# for Galway lab use: 192.168.8.97
+export SEED_NTP_SERVER="ntp.hp.net"
+export SEED_NAMESERVER="16.110.135.52"
+
+from the ../build directory:
+
+sudo -E HOME=/root bash -x tripleo/tripleo-incubator/scripts/hp_ced_host_manager.sh --create-seed
+
+Build the cloud from the seed:
+ bash -x tripleo/tripleo-incubator/scripts/hp_ced_installer.sh
+
+for changes without rebuilding images:
+    bash -x tripleo/tripleo-incubator/scripts/hp_ced_installer.sh --skip-install-seed --skip-install-undercloud
+
+
+To cleanup:
+TE_DATAFILE=tripleo/ce_env.json source tripleo/tripleo-incubator/undercloudrc
+$heat stack-delete undercloud
+$sleep 60
+$heat stack-list # repeat until its gone
+ then run hp_ced_intsaller.sh --skip-install-seed
+
+Your tree should look like
+
+    ce-installer
+    diskimage-builder
+    tripleo-heat-templates
+    tripleo-image-elements
+    hp-image-elements
+    build 
+               |
+-   tripleo ….
+
+If you modify something under build its will get used next time you run hp_ced_host_manager
+but to get the change into git make the change in tripleo-heat-templates and when you run
+hp_ced_build it will get copied to build/tripleo/…. same for image elements.
+If you’re changing the image elements anyway you have to build new images. If you’re NOT
+changing the element just just run hp_ced_build –no-clone –no-image and it will just recreate
+the build tree using the last images (muuuuch faster).
+
+To test CinderVolumeSingleton:
+OVERCLOUD_CINDER_VOLUME_SINGLETON=<hostname> OVERCLOUD_SWIFTSTORAGESCALE=1 OVERCLOUD_COMPUTESCALE=1 bash -x tripleo/tripleo-incubator/scripts/hp_ced_installer.sh --update-overcloud
+
+Watch cloud build by logging into node (overcloud | undercloud) and looking at /var/log/upstart/os-collect-config.log
+
+Get creds for overcloud:
+TE_DATAFILE=tripleo/ce_env.json source tripleo/tripleo-incubator/undercloudrc, OR ssh to undercloud and source /root/stackrc
+
+creds for undercloud on seed in ~/.stackrc
+
+build it with OVERCLOUD_COMPUTESCALE=1 OVERCLOUD_SWIFTSTORAGESCALE=1 to reduce vm load
+
+keep seed, delete and rebuild undercloud (and overcloud):
+$source /root/stackrc
+$heat stack-delete undercloud
+$sleep 60
+$heat stack-list # repeat until its gone
+then run hp_ced_intsaller.sh --skip-install-seed

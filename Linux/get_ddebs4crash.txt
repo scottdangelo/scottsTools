@@ -1,0 +1,20 @@
+https://wiki.hpcloud.net/display/iaas/How+to+process+incoming+IM%27s
+
+Install the debug symbols packages (ddebs) needed for new kernels.
+
+The version of the kernel that was running when the node crashed is recorded in the dump file; you can extract it using the strings command (for example: strings <dumpfile> | grep Linux -m1 -A7)
+
+In /usr/lib/debug/boot/ on the RCA development system you will find the kernels w/ debug symbols and the symbol tables for all the kernels where we've seen issues so far. If a new kernel is deployed and a dump file is collected you'll need to install the corresponding ddebs.
+
+    get the right ddebs package from Ubuntu
+        standard kernel ddebs can be downloaded from http://ddebs.ubuntu.com/pool/main/l  (on RCA dev system do for example;  wget --tries=25 ddebs.ubuntu.com/pool/main/l/linux-lts-quantal/linux-image-3.5.0-46-generic-dbgsym_3.5.0-46.70~precise1_amd64.ddeb )
+        if the crash was on a kernel w/ a specific patch or hotfix that was created for HP, request the ddebs package in the Canonical case that requested that kernel build.
+    install the package on the RCA dev system (sudo dpkg -i <ddebs-file>)
+        the vmlinux file will be installed into /usr/lib/debug/boot
+    copy the System.map file from the /boot dir on the node where the crash happened to /usr/lib/debug/boot on the RCA system
+    rename the System.map and vmliux file in /usr/lib/debug/boot w/ the "extension" provided by "uname -a" so that the ddebs for similar kernels don't get mixed up.
+
+    Also:
+    https://launchpad.net/~inaddy/+archive/ubuntu/sf00062980/+packages
+    
+    for hotfix

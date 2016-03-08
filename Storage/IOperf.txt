@@ -1,0 +1,87 @@
+From https://jira.hpcloud.net/browse/BOCK-4407
+
+The top level device file for this volume on the compute host nv-ae1-2az1-compute0126.useast.hpcloud.net is /dev/dm-10. The storage host is bk-ae1-2az1-storage0009, and on that host the top level device file is /dev/dm-73.
+
+On compute host, the relevant excerpt from dmsetup ls --tree:
+
+volume-5c56301f-a484-4548-95bf-d6103ef3c57c (252:10) <--- so it is /dev/dm-10
+|-bv-VDM-Pod1-8cd52ba2-8dee-11e3-a570-78e7d124f5dd-BVM-BockPod3-NodeB (252:9)
+|  `- (8:80) <--------- this is sdf
+`-bv-VDM-Pod1-0ab0c642-2f8c-11e3-a570-78e7d124f5dd-BVM-BockPod2-NodeB (252:8)
+    `- (8:48)
+
+On the compute host, isciadm tells us this about sdf:
+Target: bockpod3-nodeb-nv-ae1-2az1-compute0126
+        Current Portal: 10.22.189.108:3260,2
+        Persistent Portal: 10.22.189.108:3260,2
+[.....]
+                        Attached scsi disk sdf          State: running
+
+So the storage node is 10.22.189.108 which is bk-ae1-2az1-storage0009.
+
+On the storage node the relevant excerpt from dmsetup ls --tree:
+NodeB-target-nv-ae1-2az1-compute0126 (252:73) <---------- so it is /dev/dm-73
+`-VatNodeB-nova_bock_vg_0-bv-VDM-Pod1-8cd52ba2-8dee-11e3-a570-78e7d124f5dd-BVM-BockPod3-NodeB (252:107)
+    `-3600c0ff00015f239148efb5101000000 (252:23)
+       |- (65:48)
+       `- (66:160)
+
+I used collectl to look at disk stats for /dev/dm-10 on the compute host, and /dev/dm-73 on the storage host. I got 24 hours of data. I have a question out to the Rover team on whether the data I see for /dev/dm-10 matches the data they see in the guest for their volume.
+
+One thing to note (I had not realized this in similar issues we investigated in the past): the average disk wait time we see on the compute node is actually the disk service time the guest will observe. This is because there is queuing going on at the guest layer and there is queuing also going on when the IO reaches the host.
+
+So the worst service time I saw during this 24 hour period was this:
+
+# DISK STATISTICS (/sec)
+#                   <---------reads---------><---------writes---------><--------averages--------> Pct
+#Time     Name       KBytes Merged  IOs Size  KBytes Merged  IOs Size  RWSize  QLen  Wait SvcTim Util
+06:42:29 dm-10            0      0    0    0     152      0    6   24      24     3   227     60   37
+
+We saw a service time of 60ms, which translated into a wait time of 227ms because the qlength was 3. Note that the guest will therefore see a service time of 227ms, and if it had let's say 4 IOs queued then it would see a wait time of ~1s, which gets us into the range that Rover occasionally observes.
+
+What do we see on the storage node during this interval? Here are all the relevant devices, dm-73 is the top level.
+
+# DISK STATISTICS (/sec)
+#                   <---------reads---------><---------writes---------><--------averages--------> Pct
+#Time     Name       KBytes Merged  IOs Size  KBytes Merged  IOs Size  RWSize  QLen  Wait SvcTim Util
+06:42:32 dm-73            0      0    0    0     141      0    7   19      19     4   233     51   37
+06:42:32 dm-107           0      0    0    0     141      0    7   19      19     4   233     51   37
+06:42:32 dm-23           82      0    5   18    1087      0   96   11      11    12    76      6   61
+06:42:32 sdt             57      0    3   22     445      0   48    9       9    14    66      4   23
+06:42:32 sdaq            25      0    2   12     641      0   48   13      13     9    87      9   46
+
+The first thing to observe is the dm-73 roughly matches dm-10 on the compute node, so that's a sanity check. Note that the service time of the actual underlying disks (sdt and sdaq are the actual LUNs exposed by the array) is 4ms and 9ms, which is completely reasonable for disks under pressure. But since there is a qlength on these disks (e.g. 14 on sdt) the wait time for sdt is 66ms, and this essentially becomes the service time for the higher level layer like dm-73.
+
+Here is what sdt traffic looks like in the internal around 06:42:32:
+
+# DISK STATISTICS (/sec)
+#                   <---------reads---------><---------writes---------><--------averages--------> Pct
+#Time     Name       KBytes Merged  IOs Size  KBytes Merged  IOs Size  RWSize  QLen  Wait SvcTim Util
+06:40:22 sdt              8      0    1    9     384      0   39   10       9     4     4      1    4
+06:40:32 sdt             35      0    2   20     676      0   64   11      10     2     5      1   11
+06:40:42 sdt             83      0    6   14     454      0   32   14      14     1     4      2    9
+06:40:52 sdt             13      0    0   44     484      0   56    9       8     3     7      2   13
+06:41:02 sdt              8      0    1   13     724      0   59   12      12     2     4      2   12
+06:41:12 sdt              8      0    2    5     943      0   69   14      13     2     2      1    8
+06:41:22 sdt             49      0    3   20     457      0   44   10      10     2     3      1    7
+06:41:32 sdt             15      0    2    8     511      0   62    8       8     2     5      2   15
+06:41:42 sdt             54      0    4   15     505      0   53   10       9     3     3      1    5
+06:41:52 sdt             32      0    3   12     332      0   32   10      10     1     3      1    6
+06:42:02 sdt             19      0    3    8     405      0   40   10      10     1     9      5   25
+06:42:12 sdt             12      0    0   64     437      0   46   10       9    19   126      6   29
+06:42:22 sdt             69      0    4   19     446      0   39   11      12     2     6      2    9
+06:42:32 sdt             57      0    3   22     445      0   48    9       9    14    66      4   23
+06:42:42 sdt              0      0    0    0     232      0   28    8       8    31   558     17   49
+06:42:52 sdt             11      0    2    5    4622      0   79   59      57     3     6      1   14
+06:43:02 sdt             19      0    4    5    1142      0   46   25      23     1     8      5   26
+06:43:12 sdt              9      0    1   10     396      0   48    8       8     2     4      1    9
+06:43:22 sdt             42      0    4   11     485      0   38   13      12     6    25      3   16
+06:43:32 sdt             37      0    2   17     678      0   66   10      10     2     5      2   16
+06:43:42 sdt             27      0    2   16    1332      0   38   35      34     1     5      2   11
+06:43:52 sdt             23      0    0   58     339      0   36    9       9     4     3      0    2
+
+Notice that around 06:42 the service time jumped up somewhat, but the queue length jumped up a lot, so the average wait spiked, and the average wait is what looks like the service time to the higher dm layers.
+
+Conclusion: This is unfortunately not that different from everything we have seen before. When you have a spike in traffic the underlying disk service time will go up a bit since data is being accessed from a broader swath of media leading to more seek and rotational delays. And then there are various layers of queuing which have a multiplicative effect on the service time observed by the guest. There is not much we can do about this until we provide a solution with true QoS, about the best we can do right now is give Rover their own reserved array (along the lines of what we are doing for compute for workday).
+
+One additional piece of information: for the above comment, note that sdt and sdaq are multipaths to the same underlying lun on the P2000 array. This lun is striped across 12 disks (RAID-6). But, there are usually 3 others luns striped across the same set of 12 disks. In other words, the traffic we see on sdt is just a partial picture of the traffic on the underlying physical disks, since there are other luns on the same disks (whose traffic I did not analyze above).

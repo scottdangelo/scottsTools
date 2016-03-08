@@ -1,0 +1,17 @@
+All,
+So as I think we all are aware there are some ghosts in the machine and where we seem to be seeing some "unusual" network behaviours where we are seeing an elevated number of node shoots but also situations were the node is up but not pinging but is sshable and or where name lookup from within a machine are failing regularly.
+
+In order to try and gather some more info at this point I think there is some additional data we can gather (which may or may not be useful) if you can get into a node of course.
+
+1) netstat -nat
+
+2) cat /proc/slabinfo
+
+3) ethtool -S eth2 (where eth2 is the active dev)
+
+4) echo t > /proc/sysrq-trigger (to gather in kernel stack traces.
+
+There may be other useful info to gather but this is at least my first pass.
+
+-Liam
+

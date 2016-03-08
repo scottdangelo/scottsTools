@@ -1,0 +1,23 @@
+Field Conversion
+
+Map specific dictionary fields through a function
+
+def field_map(dictseq,name,func):
+    for d in dictseq:
+    d[name] = func(d[name])
+    yield d
+
+Example: Convert a few field values
+
+log = field_map(log,"status", int)
+log = field_map(log,"bytes", lambda s: int(s) if s !='-' else 0)
+
+{'status': 200, # now is int
+'proto': 'HTTP/1.1',
+'referrer': '-',
+'request': '/ply/ply.html',
+'datetime': '24/Feb/2008:00:08:59 -0600',
+'bytes': 97238, #now is int
+'host': '140.180.132.213',
+'user': '-',
+'method': 'GET'}

@@ -1,0 +1,7 @@
+root@stratus17:~/mysql-backup# du -ah | grep -v "/$" | sort -h |tail -6
+3.5G    ./backuptest-28-May-2014/2014-05-27-01-00
+3.8G    ./backuptest-26-Nov-2013/ae1-2/2013-11-26-01-00
+4.1G    ./backuptest-28-May-2014
+4.2G    ./backuptest-26-Nov-2013/ae1-2
+6.1G    ./backuptest-26-Nov-2013
+14G     .

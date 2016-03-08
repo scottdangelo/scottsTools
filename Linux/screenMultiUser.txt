@@ -1,0 +1,18 @@
+1. Set screen setuid flag:
+chmod +s screen
+
+2. Start a new screen sessions:
+screen -S mihai
+
+3. Set multiuser
+Ctrl-A
+:multiuser on
+
+4. Add the user to join your session to the ACL list:
+Ctrl-A
+:acladd jimbo
+
+5. Now connect as jimbo and join cmihai's session (called mihai):
+screen -x cmihai/mihai
+
+

@@ -1,0 +1,2 @@
+dd if=/dev/mapper/3600c0ff00019536907cc8c5101000000 of=/dev/null bs=1048576 count=1 iflag=direct
+

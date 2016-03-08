@@ -1,0 +1,11 @@
+Tcpdump for only (RST) RESET packets
+
+root@cr-stbaz1-api0001:~# tcpdump -nnvvXSs 1514 'tcp[13] & 4!=0' -w /tmp/dumpFile
+
+-nn no DNS or port
+-vv very verbose
+-X hex and ASCII
+-S relative sequence numbers
+-s <num> bytes to return (0 would return all)
+
+

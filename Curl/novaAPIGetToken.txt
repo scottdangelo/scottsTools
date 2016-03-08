@@ -1,0 +1,9 @@
+echo {\"auth\": {\"tenantName\": \"${OS_PROJECT_ID}\", \"passwordCredentials\": {\"username\": \"${OS_USERNAME}\", \"password\": \"${OS_PASSWORD}\"}}} > data.json
+
+curl -i https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/tokens -X POST -H "Content-Type: application/json" -H "Accept: application/json" -H "User-Agent: python-cinderclient" -d '{"auth": {"tenantName": "scott_cinder_project", "passwordCredentials": {"username": "scott.dangelo", "password": "irwt50b!!"}}}'
+
+
+
+OR JUST USE:
+keystone token-get
+

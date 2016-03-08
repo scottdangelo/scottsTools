@@ -1,0 +1,64 @@
+Instructions (basically identical to 32-bit x86)
+For gory instruction set details, read the full Intel PDFs: part 1 (A-M) and part 2 (N-Z).
+Mnemonic
+    Purpose
+    Examples
+mov dest,src
+    Move data between registers, load immediate data into registers, move data between registers and memory.
+    mov rax,4  ; Load constant into rax
+mov rdx,rax  ; Copy rax into rdx
+mov rdx,[123]  ; Copy rdx to memory address 123
+push src
+    Insert a value onto the stack.  Useful for passing arguments, saving registers, etc.
+    push rbp
+pop dest
+    Remove topmost value from the stack.  Equivalent to "mov dest, [rsp]; add 8,rsp"
+    pop rbp
+call func
+    Push the address of the next instruction and start executing func.
+    call print_int
+ret
+    Pop the return program counter, and jump there.  Ends a subroutine.
+    ret
+add dest,src
+    dest=dest+src
+    add rax,rdx ; Add rbx to rax
+mul src
+    Multiply rax and src as unsigned integers, and put the result in rax.  High 64 bits of product (usually zero) go into rdx.
+    mul rdx ; Multiply rax by rdx
+; rax=low bits, rdx overflow
+div src
+    Divide rax by src, and put the ratio into rax, and the remainder into rdx.
+Bizarrely, on input rdx must be zero, or you get a SIGFPE.
+    mov rdx,0 ; avoid error
+div rcx ; compute rax/rcx
+shr val,bits
+    Bitshift a value right by a constant, or the low 8 bits of rcx ("cl").
+Shift count MUST go in rcx, no other register will do!
+    add rcx,4
+shr rax,cl ; shift by rcx
+jmp label   Goto the instruction label:.  Skips anything else in the way.   jmp post_mem
+mov [0],rax ; Write to NULL!
+post_mem: ; OK here...
+cmp a,b
+
+    Compare two values.  Sets flags that are used by the conditional jumps (below).
+    cmp rax,10  
+jl label    Goto label if previous comparison came out as less-than.  Other conditionals available are: jle (<=), jeq (==), jge (>=), jg (>), jne (!=), and many others.
+Also available in unsigned comparisons: jb (<), jbe (<=), ja (>), jae (>=).
+    jl loop_start  ; Jump if rax<10
+
+Constants, Registers, Memory
+"12" means decimal 12; "0xF0" is hex.  "some_function" is the address of the first instruction of the function.  Memory access (use register as pointer): "[rax]".  Same as C "*rax".
+Memory access with offset (use register + offset as pointer): "[rax+4]".  Same as C "*(rax+4)".
+Memory access with scaled index (register + another register * scale): "[rax+rbx*4]".  Same as C "*(rax+rbx*4)".
+    
+Registers
+rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, and r15. Registers can be accessed via a variety of names and sizes:
+64-bit: rax, r8
+32-bit: eax, r8d  (plus zero extension)
+16-bit: ax, r8w
+8-bit: al, r8b
+rsp is the stack pointer
+The stack frame pointer isn't used very often.
+Return value in rax (or eax)

@@ -1,0 +1,24 @@
+Stephen Mulcahy
+9:46 AM
+so, for anyone that cares, howto to test a gerrit patch locally
+Stephen Mulcahy
+9:46 AM
+export TRIPLEO_ROOT=~/ce_build
+sudo rm -rf ${TRIPLEO_ROOT} ~/.cache
+mkdir -p ${TRIPLEO_ROOT}
+cd ${TRIPLEO_ROOT}
+git clone http://git.gozer.hpcloud.net/hp/ce-installer
+git clone http://git.gozer.hpcloud.net/hp/ce-tools
+
+export DEVTEST_BASEOS=hlinux
+export DEVTEST_REPO=gozer_installer
+export CE_BUILD_TYPE=installer
+export DEVTEST_LOCATION=galway
+export HLINUX_ARCHIVE=2014/repo.2014-07-08/
+export PYPI_ARCHIVE="2014-09-03T99:99:01"
+source ${TRIPLEO_ROOT}/ce-tools/ce-tripleo-config/ce_config
+
+# your custom patch test starts here ...
+(git clone https://review.hpcloud.net/openstack/tripleo-image-elements ${TRIPLEO_ROOT}/tripleo-image-elements && cd ${TRIPLEO_ROOT}/tripleo-image-elements && git fetch https://review.hpcloud.net/openstack/tripleo-image-elements refs/changes/76/38576/11 && git checkout FETCH_HEAD)
+
+ce-installer/tripleo/tripleo-incubator/scripts/hp_ced_build.sh

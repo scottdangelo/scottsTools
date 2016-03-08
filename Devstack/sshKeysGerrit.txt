@@ -1,0 +1,7 @@
+Gerrit user name is scottda
+need id_rsa in ~/.ssh
+chmod 600 ~/.ssh/id_rsa
+
+Might need user to be scottda
+Also, upload the current ~/.ssh/id_rsa.pub to openstack gerrit:
+https://review.openstack.org/#/settings/ssh-keys

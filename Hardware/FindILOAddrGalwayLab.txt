@@ -1,0 +1,2 @@
+m what was that hack for discovering the ILO address in the lab?
+log onto samwise and ping [hostname]-mp

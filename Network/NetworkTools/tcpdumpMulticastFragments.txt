@@ -1,0 +1,19 @@
+A packet capture on qu-aw2-2az1-messageq0001 looks very much like what is in https://jira.hpcloud.net/browse/NET-3742
+rick jones
+Apr-24 5:59 PM
+rjones2@qu-aw2-2az1-messageq0001:~$ sudo tcpdump -c 60 -nli eth0 host 239.8.115.15
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on eth0, link-type EN10MB (Ethernet), capture size 65535 bytes
+23:57:53.459396 IP 10.8.115.42 > 239.8.115.15: udp
+23:57:53.459408 IP 10.8.115.42 > 239.8.115.15: udp
+23:57:53.459411 IP 10.8.115.42 > 239.8.115.15: udp
+23:57:53.459449 IP 10.8.115.42 > 239.8.115.15: udp
+23:57:53.459451 IP 10.8.115.42 > 239.8.115.15: udp
+23:57:53.459509 IP 10.8.115.42 > 239.8.115.15: udp
+23:57:53.459516 IP 10.8.115.42 > 239.8.115.15: udp
+23:57:53.459557 IP 10.8.115.42 > 239.8.115.15: udp
+
+those "little udp" lines are 2nd or later fragments of a fragmented IP datagram carrying a UDP datagram. If it were the first fragment it would have had the UDP header and would have been printed as a "big UDP" line
+
+
+

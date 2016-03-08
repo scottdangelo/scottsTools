@@ -1,0 +1,5 @@
+export no_proxy=$no_proxy,192.168.245.3
+export OS_TENANT_NAME=admin
+export OS_AUTH_URL=http://PADAWANBASE-CCP-T01-VIP-KEY-API-NETCLM:35357/v2.0/
+export OS_PASSWORD=admin
+export OS_USERNAME=admin

@@ -1,0 +1,19 @@
+FIRST:
+sudo hpacucli
+
+Then
+
+=> ctrl all show config
+
+Smart Array P212 in Slot 1 (sn: PACCPID11160DV6)
+
+   array A (SAS, Unused Space: 0 MB)
+
+
+      logicaldrive 1 (1.8 TB, RAID 1, Interim Recovery Mode)
+
+      physicaldrive 1I:0:1 (port 1I:box 0:bay 1, SAS, 2 TB, OK)
+      physicaldrive 1I:0:2 (port 1I:box 0:bay 2, SAS, 2 TB, Failed) 
+
+will the new drive get added to the raid array automatically?
+

@@ -1,0 +1,5 @@
+~/devstack$ sudo ovs-vsctl add-br OVS-BR0
+~/devstack$ sudo ovs-vsctl add-port OVS-BR0 gre -- set Interface gre1 type=gre options:remote_ip=172.24.4.0
+ovs-vsctl: no row "gre1" in table Interface
+~/devstack$ sudo ovs-vsctl add-port OVS-BR0 gre -- set Interface br-ex type=gre o
+

@@ -1,0 +1,9 @@
+Sep 27 07:58:34 cr-ae1-2az1-volmanager0008 -logbash: HISTORY: PID=53274 ** [BOCK] Stephen Mulcahy ** lspci -v
+Sep 27 07:58:41 cr-ae1-2az1-volmanager0008 -logbash: HISTORY: PID=53274 ** [BOCK] Stephen Mulcahy ** lspci -v
+Sep 27 07:58:44 cr-ae1-2az1-volmanager0008 -logbash: HISTORY: PID=53274 ** [BOCK] Stephen Mulcahy ** lspci -v | less
+Sep 27 07:59:13 cr-ae1-2az1-volmanager0008 -logbash: HISTORY: PID=53274 ** [BOCK] Stephen Mulcahy ** apt-cache search hpsa
+Sep 27 07:59:23 cr-ae1-2az1-volmanager0008 -logbash: HISTORY: PID=53274 ** [BOCK] Stephen Mulcahy ** apt-cache search smartarray
+Sep 27 07:59:36 cr-ae1-2az1-volmanager0008 -logbash: HISTORY: PID=53274 ** [BOCK] Stephen Mulcahy ** hpacucli
+Sep 27 07:59:39 cr-ae1-2az1-volmanager0008 -logbash: HISTORY: PID=53274 ** [BOCK] Stephen Mulcahy ** sudo hpacucli
+Sep 27 08:01:42 cr-ae1-2az1-volmanager0008 -logbash: HISTORY: PID=53274 ** [BOCK] Stephen Mulcahy ** sudo dmidecode | less
+

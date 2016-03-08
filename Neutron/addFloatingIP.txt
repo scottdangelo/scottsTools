@@ -1,0 +1,3 @@
+What I do is use neutron commands (so assuming I have an instancae and a free FIP) ---> 
+1. neutron port-list --device-id <instanceId> 
+2. neutron floatingip-associate <fipId> <portId>

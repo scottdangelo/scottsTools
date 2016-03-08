@@ -1,0 +1,9 @@
+A few years ago, Patrick Jaberg at Appolicious taught me a neat trick. Many Linux distributions have a command called flock which will run a command only if it can obtain a lock on a specific file. To keep background jobs from piling up, you can simply execute using flock as follows
+
+```bash
+
+flock -n /tmp/path.to.lockfile -c command with args
+
+```
+
+There are only a few parts to this command. The -n option tells flock not to wait for the lock, but to instead exit. The lockfile path can be any writable file. Finally, the -c and command are the command to be executed. With just this simple change, I no longer have to worry about jobs backing up again.

@@ -1,0 +1,9 @@
+point .chef to rdb
+~/CinderDBbackupTest$ ll ~/.chef
+lrwxrwxrwx 1 scott scott 29 May 27 10:15 /home/scott/.chef -> /home/scott/.chef_aw1rdb-az1//
+
+
+Go to directory and decrypt
+
+~/GitRepos/cinder-chef/data_bags/cinder$ knife edb decrypt file cinder_enc_us_ae1-2.json
+

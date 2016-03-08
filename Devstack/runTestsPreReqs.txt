@@ -1,0 +1,3 @@
+<jgriffith> nikesh_vedams: yeah, you need the pre-reqs
+<jgriffith> nikesh_vedams: "sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev pkg-config libffi-dev libpq-dev libmysqlclient-dev libvirt-dev graphviz libsqlite3-dev python-tox"
+<hemna> xyang1, do you have the EMC review that uses this change ?

@@ -1,0 +1,19 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <base href="https://login.launchpad.net/+id/Bw4kREn" />
+        <link rel="openid.server"
+            href="https://login.launchpad.net/+openid" />
+    </head>
+    <body>
+        <h1>
+        OpenID Identity URL for Scott DAngelo
+        </h1>
+    </body>
+</html>

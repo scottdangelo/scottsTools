@@ -1,0 +1,1 @@
+sudo grep sql_connection /etc/nova/nova.conf | sed 's,^.*=,,;s,://, -u,;s,:, -p,;s,@, -h,;s,/, ,'

@@ -1,0 +1,8 @@
+To debug problems with getting an ip (DHCP) on instance
+1) nova console-log <instance_name>
+Look for
+DHCP request sent, no reply
+2) verify neutron-dhcp-agent running
+3) check host logs (/var/log/syslog & /var/log/neutron)
+4) If host is not seeing DHCP traffic:
+tcpdump -i all |grep -i DCHP

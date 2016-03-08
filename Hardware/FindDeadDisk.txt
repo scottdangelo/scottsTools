@@ -1,0 +1,22 @@
+Good:
+dangelo@bk-aw2az3-storage0018:~$ cat /proc/mdstat
+Personalities : [linear] [multipath] [raid0] [raid1] [raid6] [raid5] [raid4] [raid10] 
+md0 : active raid1 sdb1[1] sda1[0]
+      995456 blocks super 1.2 [2/2] [UU]
+      
+md1 : active raid1 sdb6[1] sda6[0]
+      1952376704 blocks super 1.2 [2/2] [UU]
+      
+unused devices: <none>
+
+Bad: 
+dangelo@bk-aw2az3-storage0019:~$ cat /proc/mdstat
+Personalities : [linear] [multipath] [raid0] [raid1] [raid6] [raid5] [raid4] [raid10] 
+md1 : active raid1 sdb6[1] sda6[0](F)
+      1952376704 blocks super 1.2 [2/1] [_U]
+      
+md0 : active raid1 sdb1[1] sda1[0](F)
+      995456 blocks super 1.2 [2/1] [_U]
+      
+unused devices: <none>
+

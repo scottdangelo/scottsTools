@@ -1,0 +1,26 @@
+To cleanup for new hlinux image:
+
+bin/cleanup-slave
+
+~/GitRepos/HLMworkspace/hlm-dev-tools$ ls
+ansible             doc                          hlinuxbox.json      lib              scratch                tests
+artifacts-list.txt  hlinux-20150615T162603Z.tgz  hos-vagrant-models  padawan-vagrant  setup.cfg              tools
+bin                 hlinux-20150707T190923Z.tgz  images              q                setup.py               tox.ini
+build-vagrant       hlinux.box                   isogen              README.md        test-requirements.txt
+~/GitRepos/HLMworkspace/hlm-dev-tools$ rm -f hlinux
+
+
+~/GitRepos/HLMworkspace/hlm-dev-tools$ ls images/output/
+boot.d  boot.env  boot.gitdependencies  boot.md5sum  boot.qcow2  hlinux-20150615T162603Z.box  sources.list
+~/GitRepos/HLMworkspace/hlm-dev-tools$ cd !$
+cd images/output/
+~/GitRepos/HLMworkspace/hlm-dev-tools/images/output$ rm boot.* hlinux-20150615T162603Z.box sources.list
+
+~/GitRepos/HLMworkspace/hlm-dev-tools/images/output$ rm -rf boot.d/*
+~/GitRepos/HLMworkspace/hlm-dev-tools/images/output$ ls
+boot.d
+~/GitRepos/HLMworkspace/hlm-dev-tools/images/output$ rmdir boot.d/
+
+
+~/GitRepos/HLMworkspace/hlm-dev-tools/scratch$ rm -rf *
+

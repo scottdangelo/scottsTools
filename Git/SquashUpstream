@@ -1,0 +1,6 @@
+ git review -d 233668
+ git fetch ssh://mriedem@review.openstack.org:29418/openstack/cinder refs/changes/23/233923/2 && git cherry-pick -x FETCH_HEAD
+ git rebase -i HEAD~2
+ squash 2nd into 1st
+ accept the commit message
+ and git review that sucka

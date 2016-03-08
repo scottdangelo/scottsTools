@@ -1,0 +1,1 @@
+%rdi, %rsi, %rdx, %rcx, %r8 and %r9 are the registers in order used to pass parameters to any libc function from assembly

@@ -1,0 +1,2 @@
+ If someone face issues with one, that deepakcs asked "Could not find a version that satisfies the requirement oslo.config>=1.4.0.0a3 (from -r /opt/stack/manila/requirements.txt (line 11)) (from versions: 1.1.0, 1.1.1, 1.2.0, 1.2.1, 1.3.0)", then you should update tox, virtualenv and pip packages
+ <vponomaryov> it is about running unittests with latest manila

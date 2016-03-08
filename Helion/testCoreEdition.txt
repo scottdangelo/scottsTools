@@ -1,0 +1,12 @@
+ONce installed
+
+#ssh to seed
+ssh root@192.0.2.1
+#export TE_DATAFILE=/root/tripleo/ce_env.json
+
+# then you can source overcloudrc and undercloudrc
+root@hLinux:~# . /root/tripleo/tripleo-overcloud-passwords
+root@hLinux:~# TE_DATAFILE=/root/tripleo/ce_env.json
+root@hLinux:~# . /root/tripleo/tripleo-incubator/overcloudrc-user
+
+

@@ -1,0 +1,5 @@
+~/GitRepos/tools$ cat ~/.wgetrc
+use_proxy=yes
+http_proxy=http://web-proxy.fc.hp.com:8080
+https_proxy=https://web-proxy.fc.hp.com:8080
+

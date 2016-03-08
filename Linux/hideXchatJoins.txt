@@ -1,0 +1,3 @@
+/chanopt confmode on
+
+/allchan chanopt confmode on

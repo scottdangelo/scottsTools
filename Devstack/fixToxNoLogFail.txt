@@ -1,0 +1,5 @@
+5:32 AM <dulek> Did someone noticed that tox -epy27 doesn't show a list of failing tests now?
+6:14 AM <scottda> dulek: I'd thought I'd seen that yesterday, but I thought it was just me.
+6:18 AM <dulek> scottda: -commands = ostestr {posargs}
+6:18 AM <dulek> +commands = python setup.py testr --testr-args='{posargs}'
+6:18 AM <dulek> scottda: I believe it's caused by 6bdc836

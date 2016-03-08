@@ -1,0 +1,4 @@
+Get another tenant's volumes:
+
+https://cr-stbaz1-api0001.systestb.hpcloud.net:8776/v2/50687100656100/volumes/detail?all_tenants=1\&project_id=60778576446865
+ -X GET -H "X-Auth-Project-Id: cians-project" -H "User-Agent: python-cinderclient" -H "Accept: application/json" -H "X-Auth-Token: HPAuth10_......."

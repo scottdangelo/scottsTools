@@ -1,0 +1,3 @@
+scott@ubuntuDevMar1:/usr/local/bin$ sudo cp -rs /usr/local/lib/python2.7/dist-packages/pudb /usr/lib/python2.7/pudb
+scott@ubuntuDevMar1:/usr/local/bin$ sudo cp -rs /usr/local/lib/python2.7/dist-packages/urwid /usr/lib/python2.7/urwid
+

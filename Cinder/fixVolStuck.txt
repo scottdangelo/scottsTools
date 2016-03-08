@@ -1,0 +1,31 @@
+Step 1 :- On any volmanager node --- fahyge@cr-aw1rde1-volmanager0001:~$ sudo cinder-manage volume list | grep f0c63625-be8e-486e-a42b-33174e09ffcf
+2013-08-15 09:17:29.518 19826 DEBUG cinder.openstack.common.lockutils [req-e1cccd37-5ecc-4d29-8855-99fd93a573ce None None] Got semaphore "dbapi_backend" for method "__get_backend"... inner /usr/lib/python2.7/dist-packages/cinder/openstack/common/lockutils.py:191
+f0c63625-be8e-486e-a42b-33174e09ffcf	11252341826465                  	cr-aw1rde2-volmanager0002	az2     	rnde_liam_io    	None                            	None    	creating    	detached    	100   	None                            
+fahyge@cr-aw1rde1-volmanager0001:~$
+State is creating - detached
+Step 2 On the relevant volmanager node - fahyge@cr-aw1rde2-volmanager0002:~$ sudo cinder-manage volume delete f0c63625-be8e-486e-a42b-33174e09ffcf
+Gerry Fahy
+3:20 AM
+Before :- $ cinder show f0c63625-be8e-486e-a42b-33174e09ffcf
++---------------------+--------------------------------------+
+|       Property      |                Value                 |
++---------------------+--------------------------------------+
+|     attachments     |                  []                  |
+|  availability_zone  |                 az2                  |
+|       bootable      |                false                 |
+|      created_at     |      2013-08-02T10:32:06.000000      |
+| display_description |             rnde_liam_io             |
+|     display_name    |             rnde_liam_io             |
+|          id         | f0c63625-be8e-486e-a42b-33174e09ffcf |
+|       metadata      |                  {}                  |
+|         size        |                 100                  |
+|     snapshot_id     |                 None                 |
+|     source_volid    |                 None                 |
+|        status       |               creating               |
+|     volume_type     |                 None                 |
++---------------------+--------------------------------------+
+Hide full text
+Gerry Fahy
+3:21 AM
+After :- $ cinder show f0c63625-be8e-486e-a42b-33174e09ffcf
+ERROR: No volume with a name or ID of 'f0c63625-be8e-486e-a42b-33174e09ffcf' exists.

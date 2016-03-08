@@ -1,0 +1,1 @@
+remove swift3 from defaults on localrc to fix https://bugs.launchpad.net/bugs/1193112

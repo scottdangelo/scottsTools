@@ -1,0 +1,16 @@
+#!/bin/bash
+
+urel=${1:-$(lsb_release -cs)}
+repo_sfxs=( "" updates security proposed )
+
+for repo_sfx in "${repo_sfxs[@]}"
+do
+    echo "deb http://ddebs.ubuntu.com ${urel}${repo_sfx:+-${repo_sfx}} main restricted universe multiverse"
+done | if [[ "${DEBUG:+true}" = "true" ]]
+then
+cat -
+else
+sudo tee /etc/apt/sources.list.d/ddebs.list
+fi
+
+${DEBUG:+echo} sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ECDCAD72428D7C01 

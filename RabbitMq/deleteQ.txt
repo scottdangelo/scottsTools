@@ -1,0 +1,13 @@
+Deleting legacy Bock queues
+
+Run the following on the Rabbit node to delete legacy queues:
+sudo python /usr/share/pyshared/bock/bockrpc/tools/delete_queues.py --server_address=<serveraddress> --pattern="VDM_BockPod[0-9]+_vdmrpc_queue" --user=bock --password=<password>
+
+where <serveraddress> and <password> can be found in /etc/bock/bock.conf
+
+Then verify that the queue is gone:
+nv-aw1rdb1-bock0000:~$ sudo rabbitmqctl list_queues name | grep -E "VDM_BockPod[0-9]+_vdmrpc_queue"| wc -l
+0
+
+https://wiki.hpcloud.net/display/iaas/Deleting+legacy+Bock+and+Cinder+queues+from+Rabbit+Server
+

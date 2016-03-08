@@ -1,0 +1,13 @@
+ Stop the resource
+
+You might want to stop your resource or, in other words, make your resource unavailable. That can be done like this:
+
+node1~: sudo crm
+crm(live)# resource
+crm(live)resource# stop failover-ip
+crm(live)resource# bye
+bye
+
+
+from:
+http://clusterlabs.org/wiki/Debian_Lenny_HowTo

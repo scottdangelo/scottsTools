@@ -1,0 +1,3 @@
+<rushil> cd /usr/local/lib/python2.7/dist-packages
+<rushil> sudo rm -rf oslo*
+<rushil> sudo pip install --upgrade http://tarballs.openstack.org/oslo.config/oslo.config-1.2.0a3.tar.gz#egg=oslo.config-1.2.0a3

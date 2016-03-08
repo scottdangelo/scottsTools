@@ -1,0 +1,4 @@
+~/tools/tools/HPcloud/NovaRC$ while read in
+> do cinder delete $in
+> done </tmp/deleteMe 
+

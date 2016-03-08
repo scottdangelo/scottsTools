@@ -1,0 +1,42 @@
+root@stratus47:~/work# ovs-vsctl show
+b66b9b60-f458-4cf4-8ed9-ddf75aa74378
+    Bridge brbm
+        Port brbm
+            Interface brbm
+                type: internal
+    ovs_version: "1.10.2"
+root@stratus47:~/work# ovs-vsctl del-br brbm
+root@stratus47:~/work# ovs-vsctl show
+b66b9b60-f458-4cf4-8ed9-ddf75aa74378
+    ovs_version: "1.10.2"
+root@stratus47:~/work# virsh net-destroy brbm
+Network brbm destroyed
+
+ @here do we have a convenient script that will quickly take the only live physical interface off of bridge brbm? I've figured out why cirrus9 isn't playing ball; it can see 192.0.2.{5, 6} on the real network
+
+
+were you doing real h/w work?
+
+does the virtual install get exposed to the physical network too??
+
+I presume an earlier install on this box has wired up the bridge
+
+well, I'm not doing physical; and I'm not doing virtual until I get this unpicked.
+
+
+ip addr add 192.168.185.131/16 dev eth0
+ovs-vsctl del-port eth0
+ip addr del 192.168.185.131/16 dev brbm
+
+put thisin a script
+and executes it in the background
+
+bash jan.sh &
+
+actaully bash -x is better
+
+and obviously 131 is MY ip ;-)
+
+I think the routes will fix themselves
+
+in this order 

@@ -1,0 +1,9 @@
+ubuntu@devstack:~/devstack$ neutron agent-list 
++--------------------------------------+--------------------+----------+-------+----------------+---------------------------+
+| id                                   | agent_type         | host     | alive | admin_state_up | binary                    |
++--------------------------------------+--------------------+----------+-------+----------------+---------------------------+
+| 084fc722-cc53-46df-a802-bb5e56e688b3 | Open vSwitch agent | devstack | :-)   | True           | neutron-openvswitch-agent |
+| 5f1c410a-d4d8-42e0-915c-01de11b38feb | L3 agent           | devstack | :-)   | True           | neutron-l3-agent          |
+| 7937f835-4476-4239-a1ed-930790048616 | Metadata agent     | devstack | :-)   | True           | neutron-metadata-agent    |
+| 876d9802-b69e-4f61-9a38-ca9d0b8a7d14 | DHCP agent         | devstack | :-)   | True           | neutron-dhcp-agent        |
++--------------------------------------+--------------------+----------+-------+----------------+---------------------------+

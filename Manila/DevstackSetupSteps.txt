@@ -1,0 +1,130 @@
+# From https://wiki.openstack.org/wiki/Manila/IcehouseDevstack
+# with modifications for bugs, etc
+
+#test that DNS works
+nslookup www.google.com
+# broken DNS is fixed with reboot
+# TODO figure out why DNS breaks (guess is open-vswitch
+
+#boot volume for Devstack
+# In ae1-2
+nova boot --flavor 102 --image 9d25fe2d-cf31-4b05-8c58-f238ec78e633 --key_name id_rsa --security_group default Sept18Devstack
+#in aw2-2 image for Ubuntu 14.04 is bec3cab5-4722-40b9-a78a-3489218e22fe
+
+#get floating ip and associate
+nova floating-ip-create
+nova add-floating-ip 7162c007-b4b3-4262-bc50-3f9d6052a9bf 172.24.4.3
+nova add-floating-ip <server_id> <ip>
+
+
+sudo apt-get -y install git
+# for stable branch use:
+git clone -b stable/icehouse https://github.com/openstack-dev/devstack.git
+# else for trunk use:
+git clone https://git.openstack.org/openstack-dev/devstack.git
+
+#for manila (This Will change weekend of Sept 20/2014)
+git clone https://github.com/stackforge/manila.git
+cp manila/contrib/devstack/lib/manila devstack/lib/
+
+#download glance image for manila service instance:
+# THIS WASN'T NEEDED in VIRTUAL BOX, only on HP cloud
+cd ~/devstack/files
+wget  https://www.dropbox.com/s/vi5oeh10q1qkckh/ubuntu_1204_nfs_cifs.qcow2
+
+cd devstack; cp samples/local.conf .
+
+cat <<EOF >> local.conf
+enable_service manila,m-api,m-sch,m-shr
+ 
+ HORIZON_REPO=https://github.com/NetApp/horizon.git
+ HORIZON_BRANCH=manila
+  
+  disable_service n-net
+  enable_service q-svc,q-agt,q-dhcp,q-l3,q-meta,neutron
+  Q_PLUGIN=ml2
+  ENABLE_TENANT_VLANS=True
+  ML2_VLAN_RANGES=physnet1:100:200
+  PHYSICAL_NETWORK=physnet1
+  OVS_PHYSICAL_BRIDGE=br-eth1
+  Q_ML2_PLUGIN_MECHANISM_DRIVERS=openvswitch
+  Q_ML2_PLUGIN_TYPE_DRIVERS=vlan
+  SHARE_BACKING_FILE_SIZE=8G
+#FLOATING_RANGE=192.168.33.128/28
+#FLAT_INTERFACE=eth1
+#PUBLIC_INTERFACE=eth1
+#HOST_IP=192.168.33.10
+   
+   EOF
+#Add real HOST_IP above
+
+#for GRE Lan
+  Q_PLUGIN=ml2
+#  ENABLE_TENANT_VLANS=True
+  ENABLE_TENANT_TUNNELS=True
+#  ML2_VLAN_RANGES=physnet1:100:200
+  TENANT_TUNNEL_RANGE=50:100
+  PHYSICAL_NETWORK=physnet1
+  OVS_PHYSICAL_BRIDGE=br-eth1
+  Q_ML2_PLUGIN_MECHANISM_DRIVERS=openvswitch
+#  Q_ML2_PLUGIN_TYPE_DRIVERS=vlan
+  SHARE_BACKING_FILE_SIZE=8G
+
+
+
+#fix for bug
+# https://bugs.launchpad.net/ubuntu/+source/python-keystoneclient/+bug/1242992/comments/6
+#I worked around this in my devstack-vm repo <https://github.com/lorin/devstack-vm> by adding creating a file at ~/.local/share/python_keyring/keyringrc.cfg:
+#
+#[backend]
+#default-keyring=keyring.backends.file.PlaintextKeyring
+#
+#This is insecure (passwords are stored in plaintext), but for a devstack deployment it works just fine.
+
+mkdir -p ~/.local/share/python_keyring/
+cat <<EOF> ~/.local/share/python_keyring/keyringrc.cfg
+[backend]
+default-keyring=keyring.backends.file.PlaintextKeyring
+EOF
+
+## Remove all contents of ~/devstack/extras 
+rm -f ~/devstack/extras.d/*
+cd; cp manila/contrib/devstack/extras.d/70-manila.sh devstack/extras.d/
+
+#fix for bug https://bugs.launchpad.net/python-openstackclient/+bug/1326811
+sudo apt-get install python-pip
+sudo pip install -U setuptools
+
+cd ~/devstack
+#stack it up!
+./stack.sh
+
+
+#upload the image that has NFS and samba
+#ONLY NECESSARY ON HP CLOUD< NOT ON VIRTUAL BOX
+. ~/devstack/openrc demo demo
+cd ~/devstack/files
+glance image-create --name="CirrosManila" --disk-format=qcow2 --container-format bare < ubuntu_1204_nfs_cifs.qcow2
+
+#put your public key into ~/.ssh
+#from you workstation: scp ~/.ssh/id_rsa.pub <vm_with_devstack>:
+cd; nova keypair-add --pub_key ~/.ssh/id_rsa.pub mykey
+
+#add security group settings for ping and SSH
+nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+#verify
+ubuntu@newdev:~/devstack$ nova secgroup-list-rules default
++-------------+-----------+---------+-----------+--------------+
+| IP Protocol | From Port | To Port | IP Range  | Source Group |
++-------------+-----------+---------+-----------+--------------+
+|             |           |         |           | default      |
+| icmp        | -1        | -1      | 0.0.0.0/0 |              |
+|             |           |         |           | default      |
+| tcp         | 22        | 22      | 0.0.0.0/0 |              |
++-------------+-----------+---------+-----------+--------------+
+
+# boot an instance
+nova boot --flavor m1.tiny --image b161403e-ffb9-4dfe-a102-1bc11ff116b1 --key_name mykey --security_group default sda1
+
+:

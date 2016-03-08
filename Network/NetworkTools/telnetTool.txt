@@ -1,0 +1,14 @@
+When things are working:
+dangelo@cr-aw2-2az2-api0001:~$ telnet 10.8.115.126 5672
+Trying 10.8.115.126...
+Connected to 10.8.115.126.
+Escape character is '^]'.
+^C
+Connection closed by foreign host.
+
+
+When things are not working:
+dangelo@cr-aw2-2az1-api0001:/var/log/cinder$ telnet 10.8.115.126 5672
+Trying 10.8.115.126...
+telnet: Unable to connect to remote host: Connection refused
+

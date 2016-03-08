@@ -1,0 +1,3 @@
+UZA=$1
+MY_PATH=`dirname $0`
+$MY_PATH/ncsvc -h remote.aw2.hpcloud.net -u $UZA -r SSO -f $MY_PATH/.vpn.aw2.crt

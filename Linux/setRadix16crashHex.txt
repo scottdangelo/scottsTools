@@ -1,0 +1,2 @@
+use for setting hex in crash:
+set radix 16

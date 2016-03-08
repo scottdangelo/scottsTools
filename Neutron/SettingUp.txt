@@ -1,0 +1,22 @@
+  quantum --help
+  quantum subnet-list
+  quantum net-create sdanet
+  quantum subnet-create sdanet 10.10.10.0/24 --name sdasubnet
+  quantum subnet-update 05324506-7c63-4177-bf93-389f3505f9f6 --dns_nameservers list=true 15.185.9.24
+  quantum subnet-show 05324506-7c63-4177-bf93-389f3505f9f6 
+  quantum security-group-list
+  quantum security-group-rule-create --direction ingress --protocol tcp --port_range_min 22 --port_range_max 22 65e73e8a-a99a-4c97-81df-57fbf878a854
+  quantum security-group-rule-create --direction ingress --protocol icmp 65e73e8a-a99a-4c97-81df-57fbf878a854
+  quantum router-create sdarouter
+  quantum router-interface-add sdarouter sdasubnet
+  quantum router-gateway-set sdarouter Ext-Net
+  quantum floatingip-create Ext-Net
+https://wiki.hpcloud.net/display/iaas/Getting+started+with+Quantum
+
+  quantum port-list -- --device_id dc641b5b-96ae-4ef6-a381-158258bb4ec5
+  quantum floatingip-list
+  quantum floatingip-associate 1d3e80ae-7384-4d01-bed6-69b2a90eed07 273b8379-b7fa-4f80-a570-717aa22d6b0b
+  quantum floatingip-list
+
+
+https://wiki.hpcloud.net/display/iaas/Torch+Project+-+HPCS+Cloud+Networking#TorchProject-HPCSCloudNetworking-GettingstartedwithQuantum

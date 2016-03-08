@@ -1,0 +1,16 @@
+enabled a getty on the vsp for stratus47 to check if working - in /etc/init/ttyS1.conf if you want to remove....
+as in delete the file to remove
+
+start on runlevel 2
+start on runlevel 3
+
+stop on runlevel 0
+stop on runlevel 1
+stop on runlevel 4
+stop on runlevel 5
+stop on runlevel 6
+
+respawn
+exec /sbin/getty -L 9600 ttyS1
+
+also if you modify the kernel parameters to console=ttyS1 then you'd see the console output as well on the vsp - but whether that's what you want or not is up to you

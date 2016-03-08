@@ -1,0 +1,7 @@
+In openstack/python-novaclient project, run test in py27 env, then run test in py33 env, the following error will stop test:
+
+db type could not be determined
+
+But, if you run "tox -e py33" fist, then run "tox -e py27", it will be fine, no error.
+
+workaround: remove the file in .testrepository/time.dbm, then run py33 test, it will be fine.

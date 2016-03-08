@@ -1,0 +1,18 @@
+Cannot ssh to instance
+1) Security groups 
+port 22 TCP
+all ICMP 
+2) Is the floating IP addr routable from the client?
+route -n # on client
+Verify that public subnet in OpenStack is accessible from client
+(eg. for local LAN, that it matches 192.168.0.0/24)
+3) bridges OK?
+
+Bridge Issues
+ovs-vsctl show  #is ethernet card attached to same bridge as public network?
+
+neutron router show router1   #are the private subnet and public subnet connected to the router?
+
+ip netns exec <public_namespace_id> ping <floating_ip>  #does the public network match the local LAN exactly?
+
+ip netns exec < public_namespace_id> route -n  #is traffic being correctly routed from the instance out?

@@ -1,0 +1,3 @@
+Michael Kerrin
+10:49 AM 6/6/13
+@smul if you are still having issues with g-api not starting, try apt-get purge python-anyjson, rm -fr /usr/local/lib/python2.7 and re-run stack.sh I had this issue last week, there is some python dependency that your vm has

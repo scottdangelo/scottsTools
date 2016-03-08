@@ -1,0 +1,6 @@
+#grep
+import re
+def gen_grep(pat, lines):
+patc = re.compile(pat)
+for line in lines:
+    if patc.search(line): yield line

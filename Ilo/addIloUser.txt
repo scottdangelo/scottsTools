@@ -1,0 +1,63 @@
+Hey folks, eh @all even, I raised a ticket requesting iLO users for mq nodes and I got a response saying:
+"The service teams usually create their own ilo users (talk to bock)."
+So here I am talking to Bock :) can anyone tell me what I need to do?
+Duncan Thomas
+6:40 AM
+Dave McNally: Abandon all hope all ye who enter this debate
+Dave McNally
+6:40 AM
+I was worried it might be something like that
+Duncan Thomas
+6:40 AM
+We do create them
+Cian O'Driscoll
+6:41 AM
+we have asked and asked and then asked again for library in basenode to do this
+Duncan Thomas
+6:41 AM
+There was talk of creating an 'official' way of doing it, so that various recipes don't fight over it, but that didn't happen
+Cian O'Driscoll
+6:42 AM
+@DaveMcNally i'm afraid it's manual atm
+Dave McNally
+6:42 AM
+AH but the implication is there's an "unoffical" way?
+Cian O'Driscoll
+6:42 AM
+https://wiki.hpcloud.net/display/iaas/Create+API+for+iLO+information+retrieval
+last edited by Anthony Leto on Jul 30, 2012
+Dave McNally
+6:43 AM
+so not super up-to-date then?
+Cian O'Driscoll
+6:43 AM
+nope 
+if you need to create a user
+    this is how we do it
+    Dave McNally
+    6:43 AM
+    It would appear I do
+    Cian O'Driscoll
+    6:43 AM
+    on the node run
+    Cian O'Driscoll
+    6:43 AM
+    sudo ipmitool user set name 2 bock
+    sudo ipmitool user set password 2 <password>
+    sudo ipmitool user priv 2 4 2
+    sudo ipmitool user list 2
+    Dave McNally
+    6:44 AM
+    @cian cool, thanks
+    Cian O'Driscoll
+    6:44 AM
+    you might need to change the channel "2" depending on what env you are running in
+    Dave McNally
+    6:44 AM
+    I'll make sure I check that
+    Cian O'Driscoll
+    6:44 AM
+    i think ae1-2 has an admin user already in channel 2
+    Dave McNally
+    6:44 AM
+    I was specifically warned not to use that I think

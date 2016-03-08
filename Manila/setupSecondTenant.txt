@@ -1,0 +1,18 @@
+#create network and subnet
+$ neutron net-create private
+$neutron subnet-create private 10.10.10.0/24 --name private-subnet
+
+#router
+$ neutron router-create router1
+neutron router-interface-add router1 private-subnet
+#gateway
+neutron router-gateway-set router1 public
+
+
+#setup segroup and keys
+nova keypair-add --pub_key ~/.ssh/id_rsa.pub mykey
+nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+#Below *might* be needed for GRE tunnels
+nova secgroup-add-rule default udp 1 65535 0.0.0.0/0
+

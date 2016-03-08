@@ -1,0 +1,67 @@
+#put your public key into ~/.ssh
+#from you workstation: scp ~/.ssh/id_rsa.pub <vm_with_devstack>:
+mv ~/id_rsa.pub ~/.ssh
+cd; nova keypair-add --pub_key ~/.ssh/id_rsa.pub id_rsa
+
+# create VM
+# in ae-1
+# image for 14.04 in ae1-2 is 9d25fe2d-cf31-4b05-8c58-f238ec78e633
+# image for 14.04 in aw2-2 is bec3cab5-4722-40b9-a78a-3489218e22fe
+$ source ~/tools/tools/HPcloud/NovaRC/ae1_2_novarc
+$ nova boot --key_name id_rsa --image 9d25fe2d-cf31-4b05-8c58-f238ec78e633 --flavor 102
+
+
+# create floating ip if necessary
+~/tools/HPcloud/NovaRC$ nova floating-ip-create
+
+# Add floating IP
+~/tools/tools/HPcloud/NovaRC$ neutron floatingip-list
++--------------------------------------+------------------+---------------------+--------------------------------------+
+| id                                   | fixed_ip_address | floating_ip_address | port_id                              |
++--------------------------------------+------------------+---------------------+--------------------------------------+
+| 4832d7cc-7552-470a-965f-6baf30bca60c |                  | 15.126.225.15       |                                      |
+| c88893b3-5003-43ac-a059-a0e26d1066f4 | 10.10.10.26      | 15.126.226.75       | 7e5a0aee-cf4d-4a17-91ad-76dad76e4e67 |
+
+~/tools/tools/HPcloud/NovaRC$  nova list
++--------------------------------------+------------------------+--------+-----------------------------------+
+| ID                                   | Name                   | Status | Networks                          |
++--------------------------------------+------------------------+--------+-----------------------------------+
+| 3c601ceb-5408-475a-a0f8-79da93d1a149 | DevstackJuly10         | ACTIVE | sdanet=10.10.10.27                |
+| 84b1143f-78f6-4492-8fb7-0a11132f760d | NewtestBrokenAttachAZ3 | ACTIVE | sdanet=10.10.10.24                |
+| 397be6a0-a0c8-4970-b4bc-4aa00ec87be3 | VolBackupTest1         | ACTIVE | sdanet=10.10.10.26, 15.126.226.75 |
++--------------------------------------+------------------------+--------+-----------------------------------+
+~/tools/tools/HPcloud/NovaRC$ nova add-floating-ip 3c601ceb-5408-475a-a0f8-79da93d1a149 15.126.225.15
+
+# ssh to user: ubuntu passwd: ubuntu
+$ ssh ubuntu@15.126.225.15
+
+#setup passwordless sudo
+sudo su -
+#### DO NOT change perms using sudo !!!! You will be FUCKED
+
+# AS ROOT
+chmod 660 /etc/sudoers
+#edit /etc/sudoers and add
+#%admin ALL=(ALL) NOPASSWD:ALL
+#under %sudo line:
+# Allow members of group sudo to execute any command
+%sudo   ALL=(ALL:ALL) ALL
+
+# Members of the admin group may gain root privileges
+%admin  ALL=(ALL) NOPASSWD:ALL
+
+#CHANGE PERMS FOR FILE BACK TO 440 !!!!!!!
+
+
+#restart sudo
+sudo service sudo restart
+
+# setup devstack
+sudo apt-get -y install git
+
+git clone https://git.openstack.org/openstack-dev/devstack.git
+
+ubuntu@jan8devstack:/opt/stack/cinder$ git config --global user.email "scott.dangelo@hp.com"
+ubuntu@jan8devstack:/opt/stack/cinder$ git config --global user.name scottda
+$git config --global core.editor vi
+

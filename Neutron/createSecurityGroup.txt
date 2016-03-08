@@ -1,0 +1,33 @@
+ubuntu@devstack:~/devstack$ neutron security-group-rule-create --direction ingress --protocol tcp --port_range_min 22 --port_range_max 22 f96c30ca-0f5d-4edf-bf04-8f284db44d1a
+Created a new security_group_rule:
++-------------------+--------------------------------------+
+| Field             | Value                                |
++-------------------+--------------------------------------+
+| direction         | ingress                              |
+| ethertype         | IPv4                                 |
+| id                | f878743d-df74-4b3b-9150-b73232f26676 |
+| port_range_max    | 22                                   |
+| port_range_min    | 22                                   |
+| protocol          | tcp                                  |
+| remote_group_id   |                                      |
+| remote_ip_prefix  |                                      |
+| security_group_id | f96c30ca-0f5d-4edf-bf04-8f284db44d1a |
+| tenant_id         | cd3d260adb154f828cae2c5c650c2d48     |
++-------------------+--------------------------------------+
+ubuntu@devstack:~/devstack$ neutron security-group-rule-create --direction ingress --protocol icmp f96c30ca-0f5d-4edf-bf04-8f284db44d1a
+Created a new security_group_rule:
++-------------------+--------------------------------------+
+| Field             | Value                                |
++-------------------+--------------------------------------+
+| direction         | ingress                              |
+| ethertype         | IPv4                                 |
+| id                | 693af347-9382-45c0-83d1-1cc452e88336 |
+| port_range_max    |                                      |
+| port_range_min    |                                      |
+| protocol          | icmp                                 |
+| remote_group_id   |                                      |
+| remote_ip_prefix  |                                      |
+| security_group_id | f96c30ca-0f5d-4edf-bf04-8f284db44d1a |
+| tenant_id         | cd3d260adb154f828cae2c5c650c2d48     |
++-------------------+--------------------------------------+
+

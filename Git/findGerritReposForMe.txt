@@ -1,0 +1,1 @@
+ssh gerrit.hpcloud.net -p 29418 -l ${USER} gerrit ls-projects -t --type CODE

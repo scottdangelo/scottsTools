@@ -1,0 +1,5 @@
+import cinder.version
+print cinder.version.version_info.release_string()
+
+will return the running version of cinder
+

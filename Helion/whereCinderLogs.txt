@@ -1,0 +1,10 @@
+ntoni Dabek
+7:37 AM
+where are cinder logs in Core edition?
+Antoni Dabek
+7:41 AM
+@here ^^
+Duncan Thomas
+7:41 AM
+/var/log/upstart
+...don't ask me why, I'm likely to rant

@@ -1,0 +1,6 @@
+For example (this command should be run on your workstation, not a production system):
+
+$ printf "volume-%08x\n" 12345678
+volume-00bc614e
+
+

@@ -1,0 +1,59 @@
+ubuntu@devstack:~/devstack$ sudo brctl show
+bridge name bridge id       STP enabled interfaces
+br-eth1     0000.9a5f819ec845   no      phy-br-eth1
+br-ex       0000.d20753d80747   no      qg-cbe010e8-c6
+br-int      0000.ea28a5cda140   no      int-br-eth1
+                            qr-13c87513-72
+                            qvo1f6e1c05-9d
+qbr1f6e1c05-9d      8000.66a22f99a68c   no      qvb1f6e1c05-9d
+                            tap1f6e1c05-9d
+virbr0      8000.000000000000   yes     
+ubuntu@devstack:~/devstack$ sudo route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         10.0.0.1        0.0.0.0         UG    100    0        0 eth0
+10.0.0.0        172.24.4.2      255.255.255.0   UG    0      0        0 br-ex
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 eth0
+172.24.4.0      0.0.0.0         255.255.255.0   U     0      0        0 br-ex
+192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0
+ubuntu@devstack:~/devstack$ ifconfig br-ex
+br-ex     Link encap:Ethernet  HWaddr d2:07:53:d8:07:47  
+          inet addr:172.24.4.1  Bcast:0.0.0.0  Mask:255.255.255.0
+          inet6 addr: fe80::d007:53ff:fed8:747/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:52 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:70 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:4902 (4.9 KB)  TX bytes:4650 (4.6 KB)
+
+
+ubuntu@devstack:~/devstack$ sudo ovs-vsctl show
+7506d456-fdda-4e7d-a24b-8fe1a8fc7b93
+    Bridge "br-eth1"
+        Port "phy-br-eth1"
+            Interface "phy-br-eth1"
+        Port "br-eth1"
+            Interface "br-eth1"
+                type: internal
+    Bridge br-int
+        Port "qvo1f6e1c05-9d"
+            tag: 2
+            Interface "qvo1f6e1c05-9d"
+        Port "int-br-eth1"
+            Interface "int-br-eth1"
+        Port br-int
+            Interface br-int
+                type: internal
+        Port "qr-13c87513-72"
+            tag: 1
+            Interface "qr-13c87513-72"
+                type: internal
+    Bridge br-ex
+        Port "qg-cbe010e8-c6"
+            Interface "qg-cbe010e8-c6"
+                type: internal
+        Port br-ex
+            Interface br-ex
+                type: internal
+    ovs_version: "1.4.6"
+

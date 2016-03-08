@@ -1,0 +1,28 @@
+localrc:
+HOST_IP=10.0.0.3
+FLAT_INTERFACE=br100
+#ENABLED_SERVICES=${ENABLED_SERVICES},c-bak,swift,swift3,ceilometer-acompute,ceilometer-acentral,ceilometer-collector,ceilometer-api
+ENABLED_SERVICES=${ENABLED_SERVICES},c-bak,swift
+SWIFT_REPLICAS=3
+DEST=/opt/stack
+LOGFILE=stack.sh.log
+LOGDAYS=7
+LOG_COLOR=False
+SCREEN_LOGDIR=$DEST/logs/screen
+KEYSTONE_CATALOG_BACKEND=sql
+VOLUME_BACKING_FILE_SIZE=20240M
+SWIFT_LOOPBACK_DISK_SIZE=10000000
+# change swift disk from default of 1GB to 10GB
+SWIFT_LOOPBACK_DISK_SIZE=10000000
+# disable secure deletes to improve speed
+CINDER_SECURE_DELETE=False
+Hide full text
+Scott D'Angelo
+10:31 AM
+Cool. I'm on production, so no need to set the HOST_IP
+Stephen Mulcahy
+10:31 AM
+yes
+also, if using ae1-2 - the default dns config seems flakey/broken atm at least, you should edit your subnet and remove the 168.x addr temporarily
+you can try re-ordering but the MC seems to decide its own order anyway so removing seems safer
+I added in googles easy to reember 8.8.8.8 as an alternative

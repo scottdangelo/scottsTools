@@ -1,0 +1,3 @@
+Hi Bock - was wondering if someone might have a sec for a question - for the life of me I can't figure out how to list the volumes associated with a single project via Cinder from the admin endpoint - is this even possible? Doing this from a Nova manage node in AE1-2
+
+curl -ik https://<admin-api-hostname>:8776/v2/<admin-project-id>/volumes/detail?all_tenants=1\&project_id=<project-id> -X GET -H "X-Auth-Project-Id: <admin-project-name>" -H "User-Agent: python-cinderclient" -H "Accept: application/json" -H "X-Auth-Token: *************"

@@ -1,0 +1,9 @@
+mccarthyf@cr-aw2-2az2-messageq0001:~$ sudo drbdadm statusDRBD module version: 8.3.13
+   userland version: 8.3.11
+   you should upgrade your drbd tools!
+   <drbd-status version="8.3.11" api="88">
+   <resources config_file="/etc/drbd.conf">
+   <resource minor="1" name="cinder" cs="Connected" ro1="Primary" ro2="Secondary" ds1="UpToDate" ds2="UpToDate" />
+   </resources>
+   </drbd-status>
+

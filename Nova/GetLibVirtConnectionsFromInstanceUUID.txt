@@ -1,0 +1,4 @@
+ps auxx | grep kvm | grep <instance uuid>
+Got the instance-0000???? name
+virsh list | grep instance-0000???? to get short integer name
+virsh dumpxml ?? to get the current connections from libvirt's POV

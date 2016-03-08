@@ -1,0 +1,25 @@
+@here Question on redirecting X from a server in AE to my workstation
+Did I do this correctly ?
+
+On my workstation
+    $ sudo xhost +10.22.170.51
+    [sudo] password for gfahy:
+    10.22.170.51 being added to access control list
+
+On the R106B head node
+    root@cer106n0035:/opt/HP/StoreVirtual/UI# export DISPLAY="16.49.34.175:0.0"
+    root@cer106n0035:/opt/HP/StoreVirtual/UI# xclock &
+    [1] 18394
+    root@cer106n0035:/opt/HP/StoreVirtual/UI# Error: Can't open display: 16.49.34.175:0.0
+    [1]+  Exit 1                  xclock
+Hide full text
+oliver leahy
+8:36 AM
+@GerryFahy I think the easiest way is to 'ssh -X remotehost' from your work station and then ssh should tunnel X traffic back to your ws
+Fergal Mc Carthy
+8:40 AM
+@GerryFahy @oliver you may need the -Y (capital Y) option as well
+Otherwise you may encounter some restrictions/issues
+Gerry Fahy
+8:42 AM
+@oliver + @fergal Thanks. I used ssh -X -Y and at least xclock works - Thanks - so back to CMC console next ...

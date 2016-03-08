@@ -1,0 +1,2 @@
+ iscsiadm -m session -r <SID> -u 
+ to log it out

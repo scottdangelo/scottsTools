@@ -1,0 +1,1 @@
+knife search node roles:Cinder-Base -i

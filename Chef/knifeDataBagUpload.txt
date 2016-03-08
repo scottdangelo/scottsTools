@@ -1,0 +1,1 @@
+knife data bag from file bock bock_dev_rdb_az1.json

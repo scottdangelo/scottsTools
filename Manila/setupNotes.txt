@@ -1,0 +1,29 @@
+# for Devstack, use > default 8 GB disk, i.e. 50 GB
+
+# after boot, shutdown and add a bridged NIC for eth1
+sudo vi /etc/network/interfaces
+#copy eth0 stuff for eth1
+ifup eth1 # gets an IP on LAN to ssh into
+
+#setup passwordless sudo
+sudo su -
+#### DO NOT change perms using sudo !!!! You will be FUCKED
+
+# AS ROOT
+chmod 660 /etc/sudoers
+#edit /etc/sudoers and add 
+#%admin ALL=(ALL) NOPASSWD:ALL
+#under %sudo line:
+# Allow members of group sudo to execute any command
+%sudo   ALL=(ALL:ALL) ALL
+
+# Members of the admin group may gain root privileges
+%admin  ALL=(ALL) NOPASSWD:ALL
+
+#CHANGE PERMS FOR FILE BACK TO 440 !!!!!!!
+
+
+#restart sudo
+sudo service sudo restart
+
+

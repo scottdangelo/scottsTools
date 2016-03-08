@@ -1,0 +1,3 @@
+git fetch https://review.hpcloud.net/openstack/tripleo-image-elements refs/changes/39/54439/5 && git diff FETCH_HEAD
+
+above command would allowed you to diff against it without needing to check it out

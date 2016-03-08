@@ -1,0 +1,35 @@
+58  ENV |grep OS_IDENT
+   59  set |grep OS_IDENT
+   60  OS_IDENTITY_API_VERSION=3 openstack domain create dans
+   61  export OS_IDENTITY_API_VERSION=3
+   62  set |grep OS_IDENT
+   63  . openrc admin admin
+   64  openstack domain create  dans
+   65  OS_IDENTITY_API_VERSION=3 openstack domain create dans
+   66  OS_IDENTITY_API_VERSION=3 openstack --debug domain create dans
+   67  set |grep OS_
+   68  export OS_IDENTITY_API_VERSION=3
+   69  set |grep OS_
+   70  OS_IDENTITY_API_VERSION=3 openstack --debug domain create dans
+   71  vi openrc
+   72  source openrc admin admin
+   73  set |grep OS_
+   74  OS_IDENTITY_API_VERSION=3 openstack --debug domain create dans
+   75  vi openrc
+   76  openstack project list
+   77  cinder quota-show 536bdb3b877a4b01bca8e2ddd9177f90
+   78  cd /etc/keystone/
+   79  vi policy.json
+   80  mv policy.json policy.json.saved
+   81  ln -s /opt/stack/keystone/etc/policy.v3cloudsample.json policy.json
+   82  vi policy.json
+   83  sudo service apache2 restart
+   84  grep -i 'admin_token' /etc/keystone/keystone.conf
+   85  mysql -D keystone -e 'select id from user where name - "admin";'
+   86  mysql -D keystone -e 'select id from user where name = "admin";'
+   87  mysql -D keystone -e 'select id from role where name = "admin";'
+   88  curl -s -H "X-Auth-Token: nova" -X PUT http://127.0.0.1:5000/v3/domains/default/users/97e6bc288db74511b5f7bd93a624cb1c/roles/a17c0110eae04f55929e61b7096ea8fb
+   89  mysql -D keystone -e 'select * from assignment;'
+   90  cd /opt/stack/cinder/
+
+https://wiki.openstack.org/wiki/Horizon/DomainWorkFlow#Cloud_Admin_account_in_keystone

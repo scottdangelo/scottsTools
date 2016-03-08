@@ -1,0 +1,1 @@
+scottda_, scottda__: according to issue Kall had: he should update use latest 'openstack/requirements'. He could update it manually to latest master, or remove it and it would uploaded, or set devstack's env reclone=True

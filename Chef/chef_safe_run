@@ -1,0 +1,32 @@
+#!/bin/bash
+
+PIDFILE=/var/run/chef/client.pid
+LOGFILE=/var/log/chef/client.log
+CONFIG=/etc/chef/client.rb
+
+defaults=/etc/default/chef-client
+if [[ -r ${defaults} ]]
+    then
+        . ${defaults}
+        fi
+
+        chef_client=/usr/bin/chef-client
+        svc_list=( monit chef-client )
+
+        services()
+        {
+                for svc in ${svc_list[@]}
+                    do
+                                service ${svc} ${1}
+                                    done
+        }
+
+        run_chef_client()
+        {
+                ${chef_client} -P ${PIDFILE} -L ${LOGFILE} -c ${CONFIG}
+        }
+
+        services stop
+        run_chef_client
+
+# vim:expandtab:shiftwidth=4:tabstop=4:autoindent:showmatch:nohlsearch

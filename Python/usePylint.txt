@@ -1,0 +1,3 @@
+@All really find this useful. If you are working on a function in a pretty large python file. Using the following command can be great for finding issues with scope and runtime issues also
+if the fn name is block_stat just do
+    pylint virt/libvirt/connection.py | grep block_stats

@@ -1,0 +1,3 @@
+~/work/devel/Bock/packaging/bock_repo --deb-paths -D natty -C feature | grep cinder-extras | cut -d ' ' -f 4 | sort -u
+/var/www/cloud/bock/developer/pool/feature/c/cinder-extras/cinder-extras_13.6~20130711155708.gbp2983fa9.fbbock2640_all.deb
+/var/www/cloud/bock/developer/pool/feature/c/cinder-extras/cinder-extras-volume_13.6~20130711155708.gbp2983fa9.fbbock2640_all.deb

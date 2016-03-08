@@ -1,0 +1,50 @@
+
+Do you speak crypto?
+24 Jun
+
+If you’re anything like me, you quite often need to debug something network-related.
+
+That’s all well and good, but without the proper tools, it can be a real hassle. One situation that you will often find yourself in, is connecting to a server speaking some protocol over SSL or TLS.
+
+The problem is, you don’t speak crypto! Or do you?
+
+If you’ve ever debugged text-like protocols (smtp, imap, http, etc), you know how potentially easy it is to do that using a simple tool like netcat or telnet. However, once you’re using the SSL-version, surely you’re out of luck?
+
+Well, not entirely, it turns out. OpenSSL has support for acting both as an SSL client and SSL server. Especially the client mode is useful for debugging SSL server connections:
+1
+    
+openssl s_client -quiet -connect example.org:443
+
+That’s rather too verbose for my taste, so I made this easy-to-use function to simplify it:
+1
+2
+3
+4
+5
+6
+7
+8
+    
+function stelnet()
+{
+  if [[ $# != 2 ]]; then
+    echo "usage: $0 <host> <port>"
+  else
+    openssl s_client -quiet -connect $1:$2
+  fi
+}
+
+It’s named “stelnet”, in memory of the old telnet protocol. It works the same way, too:
+1
+2
+3
+4
+5
+    
+$ stelnet smtp.gmail.com 465
+depth=1 C = US, O = Google Inc, CN = Google Internet Authority
+verify error:num=20:unable to get local issuer certificate
+verify return:0
+220 mx.google.com ESMTP e44sm10190618eeh.11 - gsmtp
+
+Easy! Go ahead and copy-paste it into your .zshrc file.

@@ -1,0 +1,12 @@
+~/devstack$ . openrc admin admin
+
+~/devstack$ tools/create_userrc.sh -P -C test2tenant -u test2 -p pass
+
+#But then I had to 
+~/devstack$ export OS_PASSWORD=password
+
+#So I think it should be
+~/devstack$ tools/create_userrc.sh -P -C test2tenant -u test2
+
+#then source with
+. openrc test2 test2tenant

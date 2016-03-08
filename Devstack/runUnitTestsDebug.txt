@@ -1,0 +1,3 @@
+tox -epy27 -- --pdb cinder.tests.unit.test_gpfs
+
+run_tests.sh -d -V

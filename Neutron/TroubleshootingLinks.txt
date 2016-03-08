@@ -1,0 +1,14 @@
+OpenStack Network troubleshooting:
+http://bit.ly/OpenStackNetworking
+
+OpenStack Networking: L3 workflow:
+http://bit.ly/L3Workflow
+
+RDO Networking: http://bit.ly/RDONetworking
+
+
+FDO: Neutron with an external network:
+http://bit.ly/RDONeutronExtNet
+
+OpenStack Tales from the Crypt:
+http://bit.ly/OpenStackCrypt

@@ -1,0 +1,1 @@
+grep menuentry /boot/grub/grub.cfg

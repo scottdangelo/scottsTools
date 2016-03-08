@@ -1,0 +1,17 @@
+@here morning folks, is the problem with accessing the web ui for ftctjenkins01g.fc.usa.hp.com still ongoing ?
+Ricardo Carrillo Cruz
+2:59 AM
+hi @MarkMcD , i think @CodySomerville has some progress on that, i rememeber him saying he got hold someone from IT to unblock the https traffic
+@MarkMcD you can access jenkins yourself by doing a ssh -D, i can show you how
+2:59 AM
+Matthew Gilliard left the room
+Ricardo Carrillo Cruz
+3:00 AM
+ssh -Nf -D localhost:8080 <your gozer username>@proxy.gozer.hpcloud.net
+Mark McDonagh
+3:00 AM
+thanks @RicardoCarrilloCruz
+Ricardo Carrillo Cruz
+3:00 AM
+then configure your browser to use socks proxy on localhost 8080
+you should be able, as you have ssh public key in gozer machines

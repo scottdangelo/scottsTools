@@ -1,0 +1,36 @@
+Instead of this:
+
+cat bigfile.bin | bzip2 --best > compressedfile.bz2
+
+Do this:
+
+cat bigfile.bin | parallel --pipe --recend '' -k bzip2 --best > compressedfile.bz2
+
+grep pattern bigfile.txt
+
+do this:
+
+    cat bigfile.txt | parallel  --pipe grep 'pattern'
+
+    or this:
+
+    cat bigfile.txt | parallel --block 10M --pipe grep 'pattern'
+
+cat rands20M.txt | awk '{s+=$1} END {print s}'
+
+do this!
+
+cat rands20M.txt | parallel --pipe awk \'{s+=\$1} END {print s}\' | awk '{s+=$1} END {print s}'
+
+wc -l bigfile.txt
+
+Do this:
+
+cat bigfile.txt | parallel  --pipe wc -l | awk '{s+=$1} END {print s}'
+
+sed s^old^new^g bigfile.txt
+
+Do this:
+
+cat bigfile.txt | parallel --pipe sed s^old^new^g
+

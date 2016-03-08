@@ -1,0 +1,13 @@
+dangelo@cr-ae1-2az2-volmanager0002:~$  netstat -an | grep -e ESTAB -e Recv | sort -nr -k 2 | head
+tcp   170294      0 10.22.168.197:52969     10.22.188.20:5672       ESTABLISHED
+tcp      310      0 10.22.168.197:8776      10.22.158.132:49854     ESTABLISHED
+tcp       80      0 10.22.168.197:8776      10.22.158.196:57132     ESTABLISHED
+tcp       39      0 10.22.168.197:59448     10.22.188.20:5672       ESTABLISHED
+tcp       39      0 10.22.168.197:55739     10.22.188.20:5672       ESTABLISHED
+...
+Show full text
+rick jones
+12:32 PM
+rjones2@cr-ae1-2az2-volmanager0002:~$ sudo lsof -i :52969
+COMMAND     PID   USER   FD   TYPE    DEVICE SIZE/OFF NODE NAME
+cinder-vo 59441 cinder    8u  IPv4 346202936      0t0  TCP cr-ae1-2az2-volmanager0002.useast.hpcloud.net:52969->cr2-ae1-2-rabbit.useast.hpcloud.net:amqp (ESTABLISHED)

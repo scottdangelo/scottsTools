@@ -1,0 +1,1 @@
+@all that class loading issue - needed to also add my class to /usr/lib/python2.7/dist-packages/cinder-2014.1.hp14483_hp.egg-info/entry_points.txt - thanks to @DuncanThomas for pointing me in the right direction, I'd still be looking for it next week - horrible implementation

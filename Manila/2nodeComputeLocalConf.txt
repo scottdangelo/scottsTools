@@ -1,0 +1,18 @@
+HORIZON_REPO=https://github.com/NetApp/horizon.git
+HORIZON_BRANCH=manila
+
+disable_service n-net
+enable_service q-agt,neutron,n-cpu,rabbit
+#enable_service q-svc,q-agt,q-dhcp,q-l3,q-meta,neutron
+#FLOATING_RANGE=192.168.33.128/28
+#FLAT_INTERFACE=eth1
+#PUBLIC_INTERFACE=eth1
+HOST_IP=10.10.10.3
+SERVICE_HOST=10.10.10.30
+MYSQL_HOST=$SERVICE_HOST
+RABBIT_HOST=$SERVICE_HOST
+Q_HOST=$SERVICE_HOST
+Q_PLUGIN=ml2
+ENABLE_TENANT_TUNNELS=True
+TENANT_TUNNEL_RANGE=50:100
+

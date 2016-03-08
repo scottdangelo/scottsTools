@@ -1,0 +1,5 @@
+login and ipmitool lan print or some variation of that, iirc
+sudo ipmitool lan print 2
+
+sudo ipmitool user list 2
+

@@ -1,0 +1,14 @@
+ethtool -i eth2
+
+#will check for new version
+
+dangelo@bk-ae1-2az2-storage0008:~$ ethtool -i eth2
+driver: mlx4_en
+version: 2.1.6 (Jan  9 2014)
+firmware-version: 2.9.1530
+bus-info: 0000:05:00.0
+supports-statistics: yes
+supports-test: yes
+supports-eeprom-access: no
+supports-register-dump: no
+

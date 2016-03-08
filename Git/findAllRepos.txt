@@ -1,0 +1,4 @@
+$ ssh -p 29418 dangelo@review.hpcloud.net gerrit ls-projects
+
+also:
+https://review.hpcloud.net/#/admin/projects/

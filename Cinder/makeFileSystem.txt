@@ -1,0 +1,13 @@
+sudo cfdisk /dev/vdc
+   sudo mkfs.ext4 /dev/vdc1 (50GB)
+   sudo mkfs.ext4 /dev/vdc2 (50GB)
+   sudo vi /etc/fstab and added
+
+LABEL=cloudimg-rootfs   /        ext4   defaults        0 0
+#/dev/vdb       /mnt    auto    defaults,nobootwait,comment=cloudconfig 0       2
+/dev/vdc1       /home   ext4    defaults        0       1
+/dev/vdc2       /opt   ext4    defaults        0       1
+
+   sudo mount /dev/vdc1 /mnt
+   sudo mv /home/ubuntu /mnt
+   sudo shutdown -r now

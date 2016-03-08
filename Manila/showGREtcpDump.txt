@@ -1,0 +1,38 @@
+tcpdump can show you the GRE traffic:
+tcpdump -i ethX proto gre 
+
+That's the best way I found to see if GRE is up, just watching for two way
+"proto gre" traffic.
+
+Here's how you can match the IP addresses *inside* the GRE packet, which
+you probably will want. Note that 0x0a050505 is hexadecimal for my desired
+IP address of 10.5.5.5:
+
+root [at] os-networ:~# tcpdump -i eth1 'proto gre and ( ip[58:4] = 0x0a050505
+or ip[62:4] = 0x0a050505 )'
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on eth1, link-type EN10MB (Ethernet), capture size 65535 bytes
+16:18:17.434378 IP os-network-d > os-compute-01-d: GREv0, key=0x0, length
+110: IP opskzlp119.snops.net > 10.5.5.5: ICMP echo request, id 21321, seq
+488, length 64
+16:18:17.436190 IP os-compute-01-d > os-network-d: GREv0, key=0x0, length
+110: IP 10.5.5.5 > opskzlp119.snops.net: ICMP echo reply, id 21321, seq
+488, length 64
+16:18:18.435750 IP os-network-d > os-compute-01-d: GREv0, key=0x0, length
+110: IP opskzlp119.snops.net > 10.5.5.5: ICMP echo request, id 21321, seq
+489, length 64
+16:18:18.437798 IP os-compute-01-d > os-network-d: GREv0, key=0x0, length
+110: IP 10.5.5.5 > opskzlp119.snops.net: ICMP echo reply, id 21321, seq
+489, length 64
+: 
+
+With an instance at 10.0.0.2 on the compute node running ping 10.0.0.1, I can see ARP packets coming across the GRE tunnel:
+
+# tcpdump -i eth1 -n
+13:34:25.724597 IP 10.9.8.10 > 10.9.8.1: GREv0, key=0x2, length 54: ARP,
+  Request who-has 10.0.0.1 tell 10.0.0.2, length 28
+
+  And I can see them showing up on tapf246dd31-e0 (which is on br-int):
+
+# tcpdump -i tapf246dd31-e0 -n
+13:35:30.813915 ARP, Request who-has 10.0.0.1 tell 10.0.0.2, length 28

@@ -1,0 +1,43 @@
+sudo service resolvconf restart
+#add symlink
+sudo ln -s /run/resolvconf/resolv.conf /etc/resolv.conf
+
+hpcs certs update can silently FAIL!!!!!
+check md5sums and compare to others in hpcloud
+
+
+/etc/resolvconf/resolv.conf.d$ alias |grep jnpr
+alias juniper_bak='sudo touch /etc/jnpr-nc-hosts.bak'
+alias juniper_res='sudo touch /etc/jnpr-nc-resolv.conf'
+
+
+When juniper shuts down, it restores /etc/hosts from jnpr-nc-hosts
+and
+/etc/resolv.conf from jnpr-nc-resolv.conf
+
+Make sure iptables isn't firewalling
+sudo service ufw status
+
+check /etc/hosts:
+with VPN:
+# BEGIN hosts added by Network Connect
+168.87.242.4  remote.aw2.hpcloud.net
+# END hosts added by Network Connect
+127.0.0.1 localhost.localdomain localhost
+
+MUst have the LOCALHOST !!!! ^^^^
+
+
+check /etc/resolv.conf
+with VPN:
+~/tools/tools/Network$ cat /etc/resolv.conf
+search hpcloud.net hpcloud.ms hpcloudsvc.com
+nameserver 15.185.9.24
+
+without VPN:
+~$ cat /etc/resolv.conf
+
+nameserver 192.168.1.1
+
+
+

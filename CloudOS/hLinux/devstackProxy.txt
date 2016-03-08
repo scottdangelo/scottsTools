@@ -1,0 +1,7 @@
+export https_proxy=https://web-proxy.fc.hp.com:8080/
+export http_proxy=http://web-proxy.fc.hp.com:8080/
+export no_proxy=localhost,<Local IP>,127.0.0.0/8,::1
+export PATH=$PATH:/sbin:/usr/sbin
+
+alias vi='vim
+set -o vi

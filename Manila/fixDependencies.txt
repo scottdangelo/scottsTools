@@ -1,0 +1,4 @@
+IN Manila directoyr:
+sudo python setup.py install
+
+

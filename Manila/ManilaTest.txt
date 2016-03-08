@@ -1,0 +1,99 @@
+#download glance image of lightweight qcow2
+#upload to glance
+#DEPRECATED...THIS IMAGE DOESNT WORK
+glance image-create --name="Cirros 0.3.1" --disk-format=qcow2 \
+ --container-format bare < cirros-git-disk.qcow2
+
+glance image-list
+
+nova keypair-add --pub_key ~/.ssh/id_rsa.pub mykey
+nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+#Below *might* be needed for GRE tunnels
+nova secgroup-add-rule default udp 1 65535 0.0.0.0/0
+#get image
+nova image-list
+#boot
+nova boot --flavor m1.medium --image <image_id> \
+#nova boot --flavor m1.tiny --image <image_id> \
+  --key_name mykey --security_group default myvm0
+
+#check status
+nova list
+
+#get floating ip and associate
+nova floating-ip-create
+nova add-floating-ip 7162c007-b4b3-4262-bc50-3f9d6052a9bf 172.24.4.3
+nova add-floating-ip <server_id> <ip>
+
+#logon to instance
+#passwod is ubuntu
+ssh ubuntu@<ip>
+# for gre and vxlan you might see:
+$ ssh -vv ubuntu@172.24.4.3
+debug1: sending SSH2_MSG_KEX_ECDH_INIT
+debug1: expecting SSH2_MSG_KEX_ECDH_REPLY
+# for gre tunnels, need
+ssh  -o MACs=hmac-sha1 ubuntu@172.24.4.3
+
+#on instance, set mtu
+#DONT't need if dhcp* config is setup on controller!!!
+ifconfig eth0 mtu 1400 up
+
+#Setup Manila
+#fix security bug
+. openrc manila service
+nova secgroup-add-rule default tcp 1 65535 0.0.0.0/0
+nova secgroup-add-rule default udp 1 65535 0.0.0.0/0
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+
+#Create the Manila share network
+$ . openrc demo demo
+scott@Manila2:~/devstack$ neutron net-list
++--------------------------------------+---------+--------------------------------------------------+
+| id                                   | name    | subnets                                          |
++--------------------------------------+---------+--------------------------------------------------+
+| 8a3f02c5-874c-4c8f-85c2-6abe64e91f87 | public  | a258a862-4563-4079-b264-f56483b8dedb             |
+| 93f0e055-389b-4306-a5b3-164e878a825c | private | f9445358-d2d4-4bce-80d4-4c4e54518a5e 10.0.0.0/24 |
++--------------------------------------+---------+--------------------------------------------------+
+scott@Manila2:~/devstack$ neutron subnet-list
++--------------------------------------+----------------+-------------+--------------------------------------------+
+| id                                   | name           | cidr        | allocation_pools                           |
++--------------------------------------+----------------+-------------+--------------------------------------------+
+| f9445358-d2d4-4bce-80d4-4c4e54518a5e | private-subnet | 10.0.0.0/24 | {"start": "10.0.0.2", "end": "10.0.0.254"} |
++--------------------------------------+----------------+-------------+--------------------------------------------+
+scott@Manila2:~/devstack$ manila share-network-create --neutron-net 93f0e055-389b-4306-a5b3-164e878a825c --neutron-subnet f9445358-d2d4-4bce-80d4-4c4e54518a5e --name shareNet1
++-------------------+--------------------------------------+
+|      Property     |                Value                 |
++-------------------+--------------------------------------+
+|        cidr       |                 None                 |
+|     created_at    |      2014-06-13T22:03:30.390900      |
+|    description    |                 None                 |
+|         id        | 41c28d57-6a89-4fc2-9499-1342064fcb70 |
+|     ip_version    |                 None                 |
+|        name       |              shareNet1               |
+|    network_type   |                 None                 |
+|   neutron_net_id  | 93f0e055-389b-4306-a5b3-164e878a825c |
+| neutron_subnet_id | f9445358-d2d4-4bce-80d4-4c4e54518a5e |
+|     project_id    |   209afe08f35b44cdad4f5bb7cad94f58   |
+|  segmentation_id  |                 None                 |
+|       status      |                 None                 |
+|     updated_at    |                 None                 |
++-------------------+--------------------------------------+
+
+manila create --name share1 --share-network 6a720e11-a0b2-4066-97a3-7313cb60b37a NFS 1
+# First create takes a long time to create VM instance, volume, etc.
+
+#allow access to share for ip of client
+ manila access-allow 874f5250-9ff0-45e1-95e6-2c38517ccb39 ip 10.0.0.2
+
+#test from client
+root@ubuntu:~# showmount -e 10.254.0.3
+Export list for 10.254.0.3:
+/shares/share-874f5250-9ff0-45e1-95e6-2c38517ccb39 10.0.0.2
+root@ubuntu:~# mkdir /mnt/foo
+root@ubuntu:~# mount 10.254.0.3:/shares/share-874f5250-9ff0-45e1-95e6-2c38517ccb39 /mnt/foo
+root@ubuntu:~# touch /mnt/foo/bar
+root@ubuntu:~# ls /mnt/foo
+bar  lost+found
+

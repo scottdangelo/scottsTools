@@ -1,0 +1,3 @@
+So recommended workflow is submit fix to hp/master (so we have it for any future releases), then cherry-pick to both hp/stable/2.0 (so we have it for any CE releases) and hp/ee/stable/1.0 (so we have it for any EE releases). The cherry-picks can happen in parallel for speed if you wish.
+
+We don't merge between CE and EE anymore - all fixes need to be cherry-picked borh hp/stable/2.0 and hp/ee/stable/1.0 now (partially because we lost Jonathan, partially because the volume of changes is supposed to be low and partially because there are pitfalls to the rebasing/recutting we were doing).

@@ -1,0 +1,2 @@
+the tee command is pretty neat
+(bravo)smulcahy@smulz400:~/work$ ./rate_limit_tester_curl2.py -t HPAuth10_xxxxx -p300 2>&1 | tee >(grep -c "response code: 50?") >(grep -c "response code: 200") >(grep -c "response code: 413") > foo

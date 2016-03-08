@@ -1,0 +1,1 @@
+git clone ssh://dangelo@review.hpcloud.net:29418/openstack/cinder

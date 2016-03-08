@@ -1,0 +1,4 @@
+to summarize: 1) if you have problems with "vagrant up" of the deployer failing with: "stderr: tar: ./ansible-2.0.0.tgz: Not found in archive" then remove the content in your hlm-dev-tools/scratch directory.
+the good old rm -rf approach
+
+If the hlm-deploy.yml play fails with "Connection failure: timed out", just re-run the play, it will probably work.

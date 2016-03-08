@@ -1,0 +1,20 @@
+Tuples to Dictionaries
+
+Let's turn tuples into dictionaries
+
+colnames = ('host','referrer','user','datetime',
+'method','request','proto','status','bytes')
+
+log = (dict(zip(colnames,t)) for t in tuples)
+
+This generates a sequence of named fields
+
+{ 'status' : '200',
+'proto' : 'HTTP/1.1',
+'referrer': '-',
+'request' : '/ply/ply.html',
+'bytes' : '97238',
+'datetime': '24/Feb/2008:00:08:59 -0600',
+'host' : '140.180.132.213',
+'user' : '-',
+'method' : 'GET'}

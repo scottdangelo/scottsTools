@@ -1,0 +1,3 @@
+@scottda Another way of finding ilo details is to run sudo crm configure show on another node in the cluster
+
+For passwd and IP

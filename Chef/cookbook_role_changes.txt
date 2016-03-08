@@ -1,0 +1,25 @@
+For changes, upload new cookbook AND Role
+
+git co <feature_branch>
+Bump the version in metadata.rb:
+cat ~/GitRepos/bock-chef/cookbooks/cinder/metadata.rb |grep version
+version          "0.0.7"
+
+knife cookbook upload cinder -o cookbooks
+knife role from file roles/Cinder-Server-Base.json
+
+~/GitRepos/bock-chef$ knife cookbook show cinder
+cinder   0.0.7 0.0.6  0.0.5  0.0.2  0.0.1
+
+
+
+To roll back, delete both cookbook AND role
+
+git co master
+knife cookbook upload cinder -o cookbooks
+knife role from file roles/Cinder-Server-Base.json
+~/GitRepos/bock-chef$ knife cookbook show cinder
+cinder   0.0.6  0.0.5  0.0.2  0.0.1
+
+To see what's on the data bag in the chef server:
+knife data bag show bockcluster bockcluster_dev_rdb_az1

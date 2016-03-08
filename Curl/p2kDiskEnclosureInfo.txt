@@ -1,0 +1,3 @@
+curl -ik http://10.22.46.14/api/show/disks/encl -H "dataType: ipa" -H "sessionKey: DSESS0004e710458c9157"  -H "User-Agent: Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)"
+
+Need session key (use debug in Bock/python/bock/bvm/storage_monitor.py)
