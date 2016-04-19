@@ -1,0 +1,24 @@
+If the commit your work depends on is updated, and you need to get the latest patchset from the depended commit, you can do the following.
+
+Fetch and checkout the parent change:
+
+git review -d $PARENT_CHANGE_NUMBER
+
+Cherry-pick your commit on top of it:
+
+git review -x $CHILD_CHANGE_NUMBER
+
+Submit rebased change for review:
+
+git review
+
+
+For cinderclient Microversions:
+# original v3 endpoint
+git review -d I6ae0ada221bebb4ab1850d9c99b10fcbb585201f
+
+# add microversion support
+git review -x I840a1162b88e8ff36fa3fc4e1d6b9317104df3e0
+
+#get api-version
+git review -x Ieb1a56b28188ec17946fe5564b28c165833ffc24

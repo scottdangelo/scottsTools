@@ -61,8 +61,7 @@ sudo apt-get -y install git
 
 git clone https://git.openstack.org/openstack-dev/devstack.git
 
-ubuntu@jan8devstack:/opt/stack/cinder$ git config --global user.email
-"scott.dangelo@hpe.com"
+ubuntu@jan8devstack:/opt/stack/cinder$ git config --global user.email "scott.dangelo@hpe.com"
 ubuntu@jan8devstack:/opt/stack/cinder$ git config --global user.name scottda
 $git config --global core.editor vi
 
