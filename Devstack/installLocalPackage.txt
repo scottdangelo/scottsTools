@@ -1,0 +1,2 @@
+ <•smcginnis> scottda: Right. I think there's a way to use it to install a local package.
+2:24 PM <•smcginnis> scottda: But I always just "cd python-cinderclient; python setup.py install"
