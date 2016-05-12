@@ -1,0 +1,2 @@
+in local.conf:
+CINDER_ENABLED_BACKENDS=lvm:lvmdriver-1,lvm:lvmdriver-2
