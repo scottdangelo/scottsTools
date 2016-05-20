@@ -1,2 +1,25 @@
 in local.conf:
 CINDER_ENABLED_BACKENDS=lvm:lvmdriver-1,lvm:lvmdriver-2
+
+IN /opt/stack/tempest/etc/tempest.config:
+[volume]
+backend_names = lvmdriver-1,lvmdriver-2
+
+
+[volume-feature-enabled]
+multi_backend = True
+
+For Devstack:
+scott@DevMay19:~/devstack$ git diff
+diff --git a/lib/cinder b/lib/cinder
+index 9c818c6..c467aff 100644
+--- a/lib/cinder
++++ b/lib/cinder
+@@ -79,7 +79,7 @@ CINDER_LVM_TYPE=${CINDER_LVM_TYPE:-default}
+ # comma-separated.
+ # The old ``CINDER_MULTI_LVM_BACKEND=True`` setting had a default of:
+ # CINDER_ENABLED_BACKENDS=${CINDER_ENABLED_BACKENDS:-lvm:lvmdriver-1,lvm:lvmdriver-2}
+-CINDER_ENABLED_BACKENDS=${CINDER_ENABLED_BACKENDS:-lvm:lvmdriver-1}
++CINDER_ENABLED_BACKENDS=${CINDER_ENABLED_BACKENDS:-lvm:lvmdriver-1,lvm:lvmdriver-2}
+
+
