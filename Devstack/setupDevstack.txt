@@ -65,3 +65,8 @@ ubuntu@jan8devstack:/opt/stack/cinder$ git config --global user.email "scott.dan
 ubuntu@jan8devstack:/opt/stack/cinder$ git config --global user.name scottda
 $git config --global core.editor vi
 
+#in local.conf
+    [[local|localrc]]
+    API_RATE_LIMIT=False
+#   OFFLINE=True
+
