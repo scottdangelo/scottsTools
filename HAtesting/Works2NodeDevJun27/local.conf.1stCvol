@@ -1,0 +1,5 @@
+[[local|localrc]]
+API_RATE_LIMIT=False
+MULTI_HOST=True
+OFFLINE=True
+

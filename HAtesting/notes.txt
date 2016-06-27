@@ -27,3 +27,15 @@ Fails to pickup local.conf changes? Doesn't disable c-api and c-sched [1]
     [DEFAULT]
     my_ip=$HOST_IP
 
+*****************************************************
+Here's something where scheduler gets both backends:
+from controller/api/dev1:
+/etc/cinder/cinder.conf:
+
+local.conf:
+
+[[local|localrc]]
+API_RATE_LIMIT=False
+MULTI_HOST=True
+OFFLINE=True
+
