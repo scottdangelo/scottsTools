@@ -1,0 +1,29 @@
+Setting up 2 node devstack
+Need volume types for each different one to test
+
+Fails to pickup local.conf changes? Doesn't disable c-api and c-sched [1]
+
+
+[1]
+    [[local|localrc]]
+    API_RATE_LIMIT=False
+    blahblahblah
+    SERVICE_HOST=192.168.122.183
+    MULTI_HOST=True
+    OFFLINE=True
+
+    MYSQL_HOST=$SERVICE_HOST
+    RABBIT_HOST=$SERVICE_HOST
+    CINDER_SERVICE_HOST=$SERVICE_HOST
+    GLANCE_HOSTPORT=$SERVICE_HOST:9292
+    DATABASE_TYPE=mysql
+
+    enable_service c-vol
+    disable_service c-api,c-sched,c-bak
+
+    CINDER_ENABLED_BACKENDS=lvm:lvmdriver-1
+
+    [[post-config|$CINDER_CONF]]
+    [DEFAULT]
+    my_ip=$HOST_IP
+
