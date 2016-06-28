@@ -39,3 +39,24 @@ API_RATE_LIMIT=False
 MULTI_HOST=True
 OFFLINE=True
 
+*******************
+To test, get latest patches in series.
+
+cinderclient:
+https://review.openstack.org/#/c/327692/
+git fetch https://git.openstack.org/openstack/python-cinderclient refs/changes/92/327692/3 && git checkout FETCH_HEAD
+
+cinder:
+https://review.openstack.org/#/c/318573/
+git fetch https://git.openstack.org/openstack/cinder refs/changes/73/318573/9 && git checkout FETCH_HEAD
+
+Shutdown:
+c-vol -> c-sched -> c-api
+Do:
+cinder-manage db sync
+
+restart:
+c-vol -> csched-> c-api
+
+Check rabbit:
+sudo rabbitmqctl list_queues
