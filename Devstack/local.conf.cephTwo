@@ -111,7 +111,7 @@ DATABASE_TYPE=mysql
 enable_service c-vol
 disable_service c-api c-sched c-bak
 
-CINDER_CEPH_UUID=065d9d1f-c6dc-4e63-8c8d-d3c8cb7e1c08
+CINDER_CEPH_UUID=<get_from_etc/cinder/cinder.conf on node#1>
 REMOTE_CEPH=True
 REMOTE_CEPH_ADMIN_KEY_PATH=/home/scott/ceph_key/ceph.client.admin.keyring
 
