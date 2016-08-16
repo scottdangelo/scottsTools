@@ -34,6 +34,7 @@ from controller/api/dev1:
 
 local.conf:
 
+
 [[local|localrc]]
 API_RATE_LIMIT=False
 MULTI_HOST=True
@@ -60,3 +61,19 @@ c-vol -> csched-> c-api
 
 Check rabbit:
 sudo rabbitmqctl list_queues
+
+**
+We'll need something in /etc/cinder/cinder.conf
+(and really in local.conf):
+cluster=clusterF
+**
+cinder --os-volume-api-version 3.7 cluster-list
+
+
+*******************************
+************************************************
+Attempt to re-stack with ceph failed.
+I rebooted.
+Then failure with permissions, so I did:
+chown scott:scott /etc/ceph/ceph.client.admin.keyring
+
