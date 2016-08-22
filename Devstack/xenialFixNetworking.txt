@@ -1,0 +1,50 @@
+Use this:
+http://www.itzgeek.com/how-tos/mini-howtos/change-default-network-name-ens33-to-old-eth0-on-ubuntu-16-04.html
+
+$ sudo nano /etc/default/grub
+
+Look for “GRUB_CMDLINE_LINUX”  and add the following”net.ifnames=0 biosdevname=0“.
+
+From:
+
+GRUB_CMDLINE_LINUX=""
+
+To:
+
+GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"
+
+Generate a new grub file using the following command.
+
+$ sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+Generating grub configuration file ...
+Warning: Setting GRUB_TIMEOUT to a non-zero value when GRUB_HIDDEN_TIMEOUT is set is no longer supported.
+Found linux image: /boot/vmlinuz-4.4.0-15-generic
+Found initrd image: /boot/initrd.img-4.4.0-15-generic
+Found memtest86+ image: /memtest86+.elf
+Found memtest86+ image: /memtest86+.bin
+done
+
+Edit the interface file and change the network device name so that you will have a static ip address for ethX.
+
+$ sudo vi /etc/network/interfaces
+
+From:
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto ens3
+iface ens3 inet dhcp
+
+TO:
+
+# The primary network interface
+auto eth0
+iface eth0 inet dhcp
+
+Reboot your system.
+
+$ sudo reboot

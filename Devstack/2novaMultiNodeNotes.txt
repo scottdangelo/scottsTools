@@ -10,6 +10,7 @@ http://docs.openstack.org/developer/devstack/guides/multinode-lab.html
 Needed to add to coolsvap's local.conf:
 [[local|localrc]]
 
+Use Devstack stable/Mitaka !!!!!!!!!!
 
 **********************************
 Nova Node 1
