@@ -1,0 +1,81 @@
+Needed to add to local.conf on 2nd compute:
+DATABASE_TYPE=mysql
+
+used this:
+http://blog.coolsvap.net/2014/09/20/openstack-how-to-configure-2-node-devstack-controller-compute-configuration-nova-network/
+
+and this:
+http://docs.openstack.org/developer/devstack/guides/multinode-lab.html
+
+Needed to add to coolsvap's local.conf:
+[[local|localrc]]
+
+
+**********************************
+Nova Node 1
+********************
+[[local|localrc]]
+###IP Configuration
+# node 1 IP
+HOST_IP=192.168.122.209
+
+#Credentials
+ADMIN_PASSWORD=nova
+DATABASE_PASSWORD=nova
+RABBIT_PASSWORD=nova
+SERVICE_PASSWORD=nova
+SERVICE_TOKEN=nova
+
+#MULTINODE CONFIGURATION
+FLAT_INTERFACE=eth0
+FIXED_RANGE=10.4.128.0/20
+FIXED_NETWORK_SIZE=4096
+FLOATING_RANGE=192.168.122.128/25
+MULTI_HOST=1
+
+####Tempest
+enable_service tempest
+#Log Output
+LOGFILE=/opt/stack/logs/stack.sh.log
+VERBOSE=True
+LOG_COLOR=False
+SCREEN_LOGDIR=/opt/stack/logs
+
+*******************************
+NOva node 2
+**************************
+
+[[local|localrc]]
+###IP Configuration
+# node 2 ip
+HOST_IP=192.168.122.114
+
+#Credentials
+ADMIN_PASSWORD=nova
+DATABASE_PASSWORD=nova
+RABBIT_PASSWORD=nova
+SERVICE_PASSWORD=nova
+SERVICE_TOKEN=nova
+
+#MULTINODE CONFIGURATION
+FLAT_INTERFACE=eth0
+FIXED_RANGE=10.4.128.0/20
+FIXED_NETWORK_SIZE=4096
+FLOATING_RANGE=192.168.122.128/25
+MULTI_HOST=1
+
+#Node 1 IP is .209
+SERVICE_HOST=192.168.122.209
+MYSQL_HOST=192.168.122.209
+RABBIT_HOST=192.168.122.209
+GLANCE_HOSTPORT=192.168.122.209:9292
+ENABLED_SERVICES=n-cpu,n-net,n-api,c-sch,c-api,c-vol
+
+DATABASE_TYPE=mysql
+
+#Log Output
+LOGFILE=/opt/stack/logs/stack.sh.log
+VERBOSE=True
+LOG_COLOR=False
+SCREEN_LOGDIR=/opt/stack/log
+
