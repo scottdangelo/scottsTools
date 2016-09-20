@@ -1,0 +1,43 @@
+[[local|localrc]]
+CINDER_REPO=https://review.openstack.org/p/openstack/cinder
+CINDER_BRANCH=refs/changes/69/353069/3
+
+DEST=/opt/stack
+ADMIN_PASSWORD=abc123
+DATABASE_PASSWORD=$ADMIN_PASSWORD
+RABBIT_PASSWORD=$ADMIN_PASSWORD
+SERVICE_PASSWORD=$ADMIN_PASSWORD
+SERVICE_TOKEN=a682f596-76f3-11e3-b3b2-e716f9080d50
+
+# We want these to be downloaded from Git instead of pypi
+LIBS_FROM_GIT=python-cinderclient
+
+# Don't reclone on every stack.sh
+RECLONE=False
+OFFLINE=False
+
+# Cinder's volumes will use 5G each
+VOLUME_BACKING_FILE_SIZE=5125M
+
+# Swift - Object Storage, without replication
+ENABLED_SERVICES+=,s-proxy,s-object,s-container,s-account
+SWIFT_HASH=66a3d6b56c1f479c8b4e70ab5c2000f5
+SWIFT_REPLICAS=1
+SWIFT_DATA_DIR=$DEST/data
+
+enable_service s-proxy s-object s-container s-account
+
+# Cinder backup
+enable_service c-bak
+
+CINDER_ENABLED_BACKENDS=${CINDER_ENABLED_BACKENDS:-lvm:lvmdriver-1,lvm:lvmdriver-2}
+
+[[post-config|$CINDER_CONF]]
+[DEFAULT]
+host = host1
+[lvmdriver-1]
+lvm_type = thin
+lvm_max_over_subscription_ratio = 10.0
+[lvmdriver-2]
+lvm_type = thin
+lvm_max_over_subscription_ratio = 10.0

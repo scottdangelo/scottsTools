@@ -1,0 +1,2112 @@
+#!/usr/bin/env python
+
+# (C) Copyright 2014 Hewlett-Packard Development Company, L.P.
+"""
+A tool to gather information about a volume from various sources
+"""
+
+import paramiko
+import logging
+import sys
+import getpass
+import argparse
+import re
+import os
+import errno
+import socket
+import xml.etree.ElementTree as ET
+from sys import exit
+
+# get the command name and the command dir
+cmd_name = os.path.basename(sys.argv[0])
+cmd_dir = os.path.realpath(os.path.dirname(sys.argv[0]))
+
+log = logging.getLogger(__name__)
+
+# Some regexs for parsing
+vdmInfo_r = '^\| (?P<VDM>VDM_BockPod\w{1})'
+vdmInfo_c = re.compile(vdmInfo_r)
+bvInfo_r = '^\|\W+BockPod*'
+bvInfo_c = re.compile(bvInfo_r)
+bvInfo2_r = '^\|\W+bv-VDM*'
+bvInfo2_c = re.compile(bvInfo2_r)
+bvSeparation_r = '\+-----------*'
+bvSeparation_c = re.compile(bvSeparation_r)
+qemu_xml_r = '^/etc/libvirt/qemu/(?P<virsh_short>instance-\w{8}.xml)'
+qemu_xml_c = re.compile(qemu_xml_r)
+bvmID_r = 'BockPod(?P<Num>[0-9]+)-Node(?P<Letter>\w{1})'
+bvmID_c = re.compile(bvmID_r)
+devHolders_r = '^.+?(?P<device>dm-\d+)'
+devHolders_c = re.compile(devHolders_r)
+kvmUUID_r = '^.+?uuid=(?P<uuid>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})'
+kvmUUID_c = re.compile(kvmUUID_r)
+
+STACKY_SERVER = 'nv-stbaz1-manage0001.systestb.hpcloud.net'
+
+
+class ParamikoFilter(logging.Filter):
+    """Use to throttle Paramiko logging"""
+
+    def filter(self, record):
+        return not record.getMessage().endswith('Error reading SSH protocol'
+                                                ' banner')
+
+
+class CinderVolumeStatus(object):
+    """
+    This class is used to get info on Cinder volumes
+    """
+
+    ae1_2az1 = {'NOVA_VOLUME': None,
+                'CINDER_SET_VOLUME_STATUS':
+                'cr-ae1-2az1-volmanager0001.useast.hpcloud.net',
+                'BOCK_ADMIN': 'bk-ae1-2az1-storage0003.useast.hpcloud.net',
+                'HOSTNAME_SUFFIX': '.useast.hpcloud.net',
+                'RABBITMQ': 'cr-ae1-2az1-messageq0001.useast.hpcloud.net',
+                'RABBITMQ_SECONDARY':
+                'cr-ae1-2az2-messageq0001.useast.hpcloud.net',
+                'BOCK_SECONDARY_CRM': None}
+    ae1_2az2 = {'NOVA_VOLUME': None,
+                'CINDER_SET_VOLUME_STATUS':
+                'cr-ae1-2az2-volmanager0001.useast.hpcloud.net',
+                'BOCK_ADMIN': 'bk-ae1-2az2-storage0003.useast.hpcloud.net',
+                'HOSTNAME_SUFFIX': '.useast.hpcloud.net',
+                'RABBITMQ': 'cr-ae1-2az1-messageq0001.useast.hpcloud.net',
+                'RABBITMQ_SECONDARY':
+                'cr-ae1-2az2-messageq0001.useast.hpcloud.net',
+                'BOCK_SECONDARY_CRM': None}
+    ae1_2az3 = {'NOVA_VOLUME': None,
+                'CINDER_SET_VOLUME_STATUS':
+                'cr-ae1-2az3-volmanager0001.useast.hpcloud.net',
+                'BOCK_ADMIN': 'bk-ae1-2az3-storage0003.useast.hpcloud.net',
+                'HOSTNAME_SUFFIX': '.useast.hpcloud.net',
+                'RABBITMQ': 'cr-ae1-2az1-messageq0001.useast.hpcloud.net',
+                'RABBITMQ_SECONDARY':
+                'cr-ae1-2az2-messageq0001.useast.hpcloud.net',
+                'BOCK_SECONDARY_CRM': None}
+    aw2_2az1 = {'NOVA_VOLUME': None,
+                'CINDER_SET_VOLUME_STATUS':
+                'cr-aw2-2az1-volmanager0001.uswest.hpcloud.net',
+                'BOCK_ADMIN': 'bk-aw2az1-storage0001.uswest.hpcloud.net',
+                'HOSTNAME_SUFFIX': '.uswest.hpcloud.net',
+                'RABBITMQ': 'cr-aw2-2az2-messageq0001.uswest.hpcloud.net',
+                'RABBITMQ_SECONDARY':
+                'cr-aw2-2az1-messageq0001.uswest.hpcloud.net',
+                'BOCK_SECONDARY_CRM':
+                'bk-aw2az1-storage0023.uswest.hpcloud.net'}
+    aw2_2az2 = {'NOVA_VOLUME': None,
+                'CINDER_SET_VOLUME_STATUS':
+                'cr-aw2-2az2-volmanager0001.uswest.hpcloud.net',
+                'BOCK_ADMIN': 'bk-aw2az2-storage0001.uswest.hpcloud.net',
+                'HOSTNAME_SUFFIX': '.uswest.hpcloud.net',
+                'RABBITMQ': 'cr-aw2-2az2-messageq0001.uswest.hpcloud.net',
+                'RABBITMQ_SECONDARY':
+                'cr-aw2-2az1-messageq0001.uswest.hpcloud.net',
+                'BOCK_SECONDARY_CRM':
+                'bk-aw2az2-storage0022.uswest.hpcloud.net'}
+    aw2_2az3 = {'NOVA_VOLUME': None,
+                'CINDER_SET_VOLUME_STATUS':
+                'cr-aw2-2az3-volmanager0001.uswest.hpcloud.net',
+                'BOCK_ADMIN': 'bk-aw2az3-storage0003.uswest.hpcloud.net',
+                'HOSTNAME_SUFFIX': '.uswest.hpcloud.net',
+                'RABBITMQ': 'cr-aw2-2az2-messageq0001.uswest.hpcloud.net',
+                'RABBITMQ_SECONDARY':
+                'cr-aw2-2az1-messageq0001.uswest.hpcloud.net',
+                'BOCK_SECONDARY_CRM':
+                'bk-aw2az3-storage0020.uswest.hpcloud.net'}
+    stbaz1 = {'NOVA_VOLUME': None,
+              'CINDER_SET_VOLUME_STATUS':
+              'cr-stbaz1-volmanager0001.systestb.hpcloud.net',
+              'BOCK_ADMIN': 'bk-stbaz1-bock0003.systestb.hpcloud.net',
+              'HOSTNAME_SUFFIX': '.systestb.hpcloud.net',
+              'RABBITMQ': 'cr-stbaz2-messageq0001.systestb.hpcloud.net',
+              'RABBITMQ_SECONDARY':
+              'cr-stbaz1-messageq0001.systestb.hpcloud.net',
+              'BOCK_SECONDARY_CRM': None}
+    stbaz2 = {'NOVA_VOLUME': None,
+              'CINDER_SET_VOLUME_STATUS':
+              'cr-stbaz2-volmanager0001.systestb.hpcloud.net',
+              'BOCK_ADMIN': 'bk-stbaz2-bock0001.systestb.hpcloud.net',
+              'HOSTNAME_SUFFIX': '.systestb.hpcloud.net',
+              'RABBITMQ': 'cr-stbaz2-messageq0001.systestb.hpcloud.net',
+              'RABBITMQ_SECONDARY':
+              'cr-stbaz1-messageq0001.systestb.hpcloud.net',
+              'BOCK_SECONDARY_CRM': None}
+    rndeaz1 = {'NOVA_VOLUME': None,
+               'CINDER_SET_VOLUME_STATUS':
+               'cr-aw1rde1-volmanager0001.rnde.aw1.hpcloud.net',
+               'BOCK_ADMIN': 'bk-aw1rde1-storage0001.rnde.aw1.hpcloud.net',
+               'HOSTNAME_SUFFIX': '.rnde.aw1.hpcloud.net',
+               'RABBITMQ': 'cr-aw1rde2-messageq0001.rnde.aw1.hpcloud.net',
+               'RABBITMQ_SECONDARY':
+               'cr-aw1rde1-messageq0001.rnde.aw1.hpcloud.net',
+               'BOCK_SECONDARY_CRM': None}
+    # This will be removed/modified during the cleanup of BOCK-4679
+    aw2az1 = {'NOVA_VOLUME': 'nv-aw2az1-compute0006.uswest.hpcloud.net',
+              'CINDER_SET_VOLUME_STATUS': None,
+              'BOCK_ADMIN': 'bk-aw2az1-storage0001.uswest.hpcloud.net',
+              'HOSTNAME_SUFFIX': '.uswest.hpcloud.net',
+              'RABBITMQ': 'bk-aw2az1-storage0001.uswest.hpcloud.net',
+              'RABBITMQ_SECONDARY': 'bk-aw2az1-storage0003.uswest.hpcloud.net',
+              'BOCK_SECONDARY_CRM': 'bk-aw2az1-storage0023.uswest.hpcloud.net'}
+    # This will be removed/modified during the cleanup of BOCK-4679
+    aw2az2 = {'NOVA_VOLUME': 'nv-aw2az2-compute0012.uswest.hpcloud.net',
+              'CINDER_SET_VOLUME_STATUS': None,
+              'BOCK_ADMIN': 'bk-aw2az2-storage0001.uswest.hpcloud.net',
+              'HOSTNAME_SUFFIX': '.uswest.hpcloud.net',
+              'RABBITMQ': 'bk-aw2az2-storage0001.uswest.hpcloud.net',
+              'RABBITMQ_SECONDARY':
+              'bk-aw2az2-storage0006.uswest.hpcloud.net',
+              'BOCK_SECONDARY_CRM': 'bk-aw2az2-storage0022.uswest.hpcloud.net'}
+    # This will be removed/modified during the cleanup of BOCK-4679
+    aw2az3 = {'NOVA_VOLUME': 'nv-aw2az3-compute0006.uswest.hpcloud.net',
+              'CINDER_SET_VOLUME_STATUS': None,
+              'BOCK_ADMIN': 'bk-aw2az3-storage0003.uswest.hpcloud.net',
+              'HOSTNAME_SUFFIX': '.uswest.hpcloud.net',
+              'RABBITMQ': 'bk-aw2az3-storage0004.uswest.hpcloud.net',
+              'RABBITMQ_SECONDARY': 'bk-aw2az3-storage0004.uswest.hpcloud.net',
+              'BOCK_SECONDARY_CRM': 'bk-aw2az3-storage0020.uswest.hpcloud.net'}
+
+    def __init__(self, client, user, passwd, volume, environment):
+
+        self.client = client
+        self.SSO_user = user
+        self.SSO_passwd = passwd
+        self.volume = volume
+        self.volume_hex = volume
+
+        self.env = {}
+        self.env = environment
+        self.rabbitmq = None
+        self.rabbitmq_secondary = None
+
+        self.cinder_volume_status_node = None
+        self.bock_admin_node = None
+        self.hostname_suffix = None
+
+        self.rabbitmq_error = ""
+        self.cinder_response = {}
+        self.cinder_status = None
+        self.cinder_attach_status = None
+        self.cinder_az = None
+        self.cinder_host = None
+        self.cinder_db_consistent = False
+        # This will be removed during the cleanup of BOCK-4679:
+        self.nova_status = None
+
+        self.vdm_list = []
+        self.vdm = None
+        self.bock_admin_response = {}
+        self.simple_BV_ID = None
+        self.COW_count = 0
+        self.bvmServerDict = {}
+        self.bvmServerHost = None
+        self.BVMSERVER_key = None
+        self.bvmserver = None
+
+        self.instance_ID = None
+        self.instance_hex = None
+        self.compute_hostname = None
+        self.instance_running = False
+        self.kvm_short = None
+        self.virsh_short = None
+        self.qemu_xml_file = None
+        self.qemu_xml = None
+        self.virsh_xml = None
+        self.disk_devices = {}
+        self.virsh_disk_devices = {}
+        self.instance_qemu_xml_device_mounted = False
+        self.qemu_xml_disk = None
+        self.qemu_xml_source_file = None
+        self.instance_virsh_xml_device_mounted = False
+        self.virsh_xml_disk = None
+        self.virsh_xml_source_file = None
+
+        self.mapped_device_exists = False
+        self.mapped_device = None
+        self.dev_holders = None
+        self.fuser_dev_mapper = None
+        self.print_wiki_links = False
+        self.exceptions = 0
+        self.fix_mode = False
+        self.exec_str = ""
+        self.manual_action_str = ""
+
+        self.in_data_collection_phase = True
+
+    def _exec_ssh_cmd(self, host, command, exec_timeout=120, check_exit=True):
+        try:
+            self.client.connect(host, username=self.SSO_user,
+                                password=self.SSO_passwd,
+                                timeout=exec_timeout)
+            stdin, stdout, stderr = self.client.exec_command(command)
+            ret = stdout.read()
+            reterr = stderr.read()
+            return ret, reterr
+        except paramiko.AuthenticationException as e:
+            logging.error("Error when trying to run [%s]\non [%s]:\n%s\n"
+                          "If you continued with the execution login errors\n"
+                          "would accumulate and your account could be locked\n"
+                          "as a result. Exiting..." % (command, host, e))
+            exit(1)
+        except socket.error as e:
+            if e.errno == errno.ETIMEDOUT:
+                logging.error(("Connection to %s timed out for:\n%s\n") %
+                              (host, command))
+                self.exceptions += 1
+                if(check_exit):
+                    self._check_exit_condition()
+                return "exception", e
+            elif e.errno == errno.ECONNREFUSED:
+                logging.error(("Connection to %s refused for:\n%s\n") %
+                              (host, command))
+                self.exceptions += 1
+                if(check_exit):
+                    self._check_exit_condition()
+                return "exception", e
+            else:
+                logging.error(("Connection to %s for:\n%s\n"
+                               "raised socket.error :\n%s\n") %
+                              (host, command, e))
+                self.exceptions += 1
+                if(check_exit):
+                    self._check_exit_condition()
+                return "exception", e
+        except Exception as e:
+            logging.error(("Connection to %s for:\n%s\n"
+                           "raised exception:\n%s\n") %
+                          (host, command, e))
+            self.exceptions += 1
+            if(check_exit):
+                self._check_exit_condition()
+            return "exception", e
+
+    # This will probably be removed during the cleanup of BOCK-4679
+    def _is_nova(self):
+        return self.nova_volume_status_node is not None
+
+    def is_cinder(self):
+        return self.cinder_volume_status_node is not None
+
+    def _no_Basic_Volume(self):
+        return self.simple_BV_ID is None
+
+    def _no_VDM(self):
+        return not self.vdm_list
+
+    # This will probably be removed during the cleanup of BOCK-4679
+    def _set_nova_volume_hex(self):
+        self.volume_hex = ("%0.8x" % (int(self.volume)))
+        logging.info("self.volume_hex: %s" % self.volume_hex)
+
+    def set_compute_host_fqdn(self, compute_host):
+        if 'hpcloud' in compute_host:
+            self.compute_hostname = compute_host
+        else:
+            self.compute_hostname = (("%s%s") %
+                                     (compute_host, self.hostname_suffix))
+        logging.debug(("set_compute_host_fqdn: compute_host: %s\nsuffix: %s\n"
+                       "self.compute_hostname: %s\n")
+                      % (compute_host, self.hostname_suffix,
+                          self.compute_hostname))
+
+    def get_instance_hex(self):
+        # This will be removed during the cleanup of BOCK-4679
+        if self._is_nova():
+            self.instance_hex = ("%x" % (int(self.instance_ID)))
+            logging.info("self.instance_hex: %s" % self.instance_hex)
+        else:
+            self.instance_hex = self.instance_ID
+
+    def setup_env(self, NOVA_VOLUME, CINDER_SET_VOLUME_STATUS, BOCK_ADMIN,
+                  HOSTNAME_SUFFIX, RABBITMQ, RABBITMQ_SECONDARY,
+                  BOCK_SECONDARY_CRM):
+        # This will be removed during the cleanup of BOCK-4679
+        self.nova_volume_status_node = NOVA_VOLUME
+        if self.nova_volume_status_node is not None:
+            self._set_nova_volume_hex()
+
+        self.cinder_volume_status_node = CINDER_SET_VOLUME_STATUS
+        self.bock_admin_node = BOCK_ADMIN
+        self.hostname_suffix = HOSTNAME_SUFFIX
+        self.rabbitmq = RABBITMQ
+        self.rabbitmq_secondary = RABBITMQ_SECONDARY
+        self.bock_secondary_crm = BOCK_SECONDARY_CRM
+
+    def _check_rabbitmq(self, response):
+        """
+        Check for 0 consumers or >1 messages in the queues and print an
+        error message if one of these issues arises.
+        This might be fixed by re-running the tool, so output that as well
+        """
+        err = ""
+        number_found = 0
+
+        lines = [s for s in response.split('\n') if s]
+        for line in lines:
+            if ('cinder' in line or 'bock.bcast' in line):
+                number_found += 1
+                rabbitq_list = line.split()
+                if (int(rabbitq_list[1]) == 0) or (int(rabbitq_list[2]) > 1):
+                    err += ("%s\n" % line)
+
+        if ('cinder' in err or 'bock' in err):
+            self.rabbitmq_error += ("RabbitMQ needs investigation. "
+                                    "Try re-running first.\n%s\n%s" %
+                                    (self.rabbitmq, err))
+            logging.error("%s" % self.rabbitmq_error)
+
+        return number_found
+
+    def get_rabbitmq_status(self, rabbit_node):
+        if self.is_cinder():
+            cmd = ("sudo rabbitmqctl  list_queues name consumers messages "
+                   "-p /cinder")
+        # This will be removed during the cleanup of BOCK-4679
+        elif self._is_nova():
+            cmd = ("sudo rabbitmqctl  list_queues name consumers messages")
+
+        response, err = self._exec_ssh_cmd(rabbit_node, cmd, 120, False)
+        logging.debug(("running:\n%s\non: %s\nresponse:\n%s") %
+                      (cmd, rabbit_node, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in get_rabbitmq_status:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            # We need to seen in the summary that there was a problem
+            self.exceptions += 1
+            return 0
+        if 'unable to connect' in err:
+            logging.debug(("Node is reachable, but the service is down:"
+                           "\n response:%s err:%s\n") % (response, err))
+            # Not worth of an exception, unless both fail
+            return 0
+
+        return self._check_rabbitmq(response)
+
+    # This will probably be removed during the cleanup of BOCK-4679
+    def _get_nova_host(self):
+        """
+        attempt to get the nova compute host
+        """
+        cmd = ("sudo nova-manage vm list |grep %s" % self.instance_ID)
+
+        response, err = self._exec_ssh_cmd(self.nova_volume_status_node, cmd,
+                                           exec_timeout=600)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.nova_volume_status_node, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _get_nova_host:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        if 'compute' in response:
+            vm_list = response.split()
+            if vm_list[2] is not None:
+                self.compute_hostname = (("%s%s") %
+                                        (vm_list[2], self.hostname_suffix))
+        # if search of vms fails, try all deleted vms (which takes longer)
+        else:
+            cmd = ("sudo nova-manage vm list --deleted=T |grep %s" %
+                   self.instance_ID)
+
+            response, err = self._exec_ssh_cmd(self.nova_volume_status_node,
+                                               cmd, exec_timeout=600)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (cmd, self.nova_volume_status_node, response))
+
+            if 'exception' in response:
+                logging.error(("Exception in _get_nova_host:\n"
+                              "response:%s\nerr:%s\n") % (response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+                return
+
+            if 'compute' in response:
+                vm_list = response.split()
+                if vm_list[2] is not None:
+                    self.compute_hostname = (("%s%s") %
+                                            (vm_list[2], self.hostname_suffix))
+        return
+
+    # This will be removed during the cleanup of BOCK-4679
+    def get_nova_volume_status(self):
+        """
+        Get the volumes status from the Nova DB Point of View
+        """
+        cmd = ("sudo nova-manage volume list |grep %s" % self.volume)
+
+        response, err = self._exec_ssh_cmd(self.nova_volume_status_node, cmd,
+                                           exec_timeout=600)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.nova_volume_status_node, response))
+
+        if 'exception' in response or 'vol' not in response:
+            logging.error(("get_nova_volume_status: Volume not found in DB\n"
+                           "Response:%s\nErr:%s") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return "volume not found"
+
+        logging.info("Nova DB POV:\n %s" % response)
+        nova_volume_status_list = response.split()
+
+        self.instance_ID = nova_volume_status_list[5]
+        self.nova_status = nova_volume_status_list[8]
+
+        if 'None' not in self.instance_ID:
+            self.get_instance_hex()
+            if self.compute_hostname is None:
+                self._get_nova_host()
+
+        return "OK"
+
+    def get_cinder_volume_status(self):
+        """
+        get the volume status from the cinder DB Point of View
+        """
+        cmd = ("sudo cinder-set-volume-status list-status %s"
+               % self.volume)
+
+        response, err = self._exec_ssh_cmd(self.cinder_volume_status_node, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.cinder_volume_status_node, response))
+
+        if 'exception' in response or 'Status' not in response:
+            logging.error(("get_cinder_volume_status: Volume not found in DB\n"
+                           "Response:%s\nErr:%s") % (response, err))
+            self.exceptions += 1
+            # check_exit_condition may not make sense in this case: we would
+            # like the script to continue and then show us everything it
+            # knows, in case anything is incoherent with this function not
+            # being able to list the status (if, for instance, it is deleted)
+            return "volume not found"
+
+        lines = [s for s in response.split('\n') if s]
+        for line in lines:
+            k, v = line.split(':')
+            self.cinder_response[k] = v.strip()
+
+        if 'None' not in self.cinder_response['Instance UUID']:
+            self.instance_ID = self.cinder_response['Instance UUID']
+            self.get_instance_hex()
+
+        self.cinder_status = self.cinder_response['Status']
+        self.cinder_attach_status = self.cinder_response['Attach Status']
+        self.cinder_az = self.cinder_response['Availability zone']
+        self.cinder_host = self.cinder_response['Host']
+        self.cinder_provider_location = \
+            self.cinder_response['Provider Location']
+
+        logging.info("Cinder DB POV:\n %s" % self.cinder_response)
+
+        if self.cinder_az not in self.env:
+            msg = (("Your ENV %s has the wrong AZ. You should be in %s.\n"
+                    "Re-run this tool with the proper environment\n")
+                   % (self.env, self.cinder_az))
+            # Without the right environment, the tool is of little use
+            # from this point
+            self._check_exit_condition(msg)
+            return msg
+
+        if (('available' in self.cinder_status and
+           'detached' in self.cinder_attach_status) or
+           ('in-use' in self.cinder_status and
+                'attached' in self.cinder_attach_status)):
+            self.cinder_db_consistent = True
+
+        return "OK"
+
+    def get_host_from_stacky(self):
+        """
+        if we haven't found the compute host, but do have a compute
+        instance UUID, we can try stacky
+        """
+        cmd = ("source /opt/stacky/stacky_config.sh; "
+               "python /opt/stacky/stacky.py uuid %s"
+               % self.instance_ID)
+
+        response, err = self._exec_ssh_cmd(STACKY_SERVER, cmd,
+                                           exec_timeout=600)
+        logging.debug(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, STACKY_SERVER, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in get_host_from_stacky:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        lines = [s for s in response.split('\n') if s]
+        for line in lines:
+            if 'exists' in line:
+                stacky_list = line.split('|')
+                stacky_list = [x.strip(' ') for x in stacky_list]
+                if 'compute' in stacky_list[6]:
+                    self.compute_hostname = stacky_list[6]
+                    logging.info("Compute Host from Stacky: %s" %
+                                 self.compute_hostname)
+                else:
+                    logging.info("Something wrong with stacky_list:\n%s" %
+                                 stacky_list)
+                break
+
+    def _get_bock_admin_vdms(self):
+        cmd = ("bock-admin --url http://127.0.0.1:9295 vdms")
+
+        response, err = self._exec_ssh_cmd(self.bock_admin_node, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.bock_admin_node, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _get_bock_admin_vdms:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        lines = [s for s in response.split('\n') if s]
+        for line in lines:
+            vdmInfo_match = vdmInfo_c.match(line)
+            if vdmInfo_match is not None:
+                self.vdm_list.append(vdmInfo_match.group('VDM'))
+
+    def get_bock_admin_status(self):
+        """
+        Get data for basic-vols from bock-admin
+
+        The bock-admin script lists all the basic volumes (BVs) comprising the
+        nova volume, and then lists all the attachments for each of the BVs.
+        Here we need to identify the basic volume at the top of the stack of
+        BVs. We do this in two steps.
+
+        1. The basic volume at the top of the stack can only be attached to a
+        single compute node. So here we find an attachment that is connected
+        to only one compute host. Lower BV's are read only layers that may be
+        attached to several compute hosts.
+
+        2. All the basic volumes comprising the nova volume MUST have an
+        attachment, otherwise the nova volume is not attached.
+        """
+        self._get_bock_admin_vdms()
+        bv_compute_host = None
+
+        for vdm in self.vdm_list:
+            # Quit if we've found the vdm
+            if self.vdm is not None:
+                continue
+
+            cmd = (("bock-admin --url http://127.0.0.1:9295 basic-vols "
+                    "--vdm_id %s volume-%s") % (vdm, self.volume_hex))
+
+            response, err = self._exec_ssh_cmd(self.bock_admin_node, cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (cmd, self.bock_admin_node, response))
+
+            if 'exception' in response:
+                logging.error(("Exception in get_bock_admin_status:\n"
+                              "response:%s\nerr:%s\n") % (response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+                return
+
+            if 'Virtual' not in response:
+                continue
+            lines = [s for s in response.split('\n') if s]
+            bvs_in_stack = 0
+            bvs_open = 0
+            temp_BV_client_ID = None
+            temp_BV_compute_host = None
+            temp_BV_segment_ID = None
+            temp_BV_dm_entry = None
+            i = -1
+            for line in lines:
+                i += 1
+                if 'Basic Disk Manager' in line:
+                    bvs_open += 1
+                # match on '| BockPod*'
+                bvmatch = bvInfo_c.match(line)
+                if bvmatch is not None:
+                    bvs_in_stack += 1
+                    bvInfoList = line.split("|")
+                    bvInfoList = [x.strip(' ') for x in bvInfoList]
+                    # Report for the simple volume, not COW
+                    if 'simple' in bvInfoList[3]:
+                        self.simple_BV_ID = bvInfoList[2]
+                        self.bock_admin_response['BVM_ID'] = bvInfoList[1]
+                        self.bock_admin_response['BV_ID'] = bvInfoList[2]
+                        self.bock_admin_response['BV_type'] = bvInfoList[3]
+                        self.vdm = vdm
+                    if 'COW' in bvInfoList[3]:
+                        self.COW_count += 1
+                    continue
+
+                bv2match = bvInfo2_c.match(line)
+                if bv2match is None:
+                    continue
+                bv2InfoList = line.split("|")
+                bv2InfoList = [x.strip(' ') for x in bv2InfoList]
+                # Step 1 (see above): the basic volume at the top of the stack
+                # will be attached to a single compute node, so it will be
+                # enclosed by separator lines
+                next_is_septor = len(lines) > i+1\
+                    and bvSeparation_c.match(lines[i-1])\
+                    and bvSeparation_c.match(lines[i+1])
+                if temp_BV_client_ID is None and next_is_septor:
+                    temp_BV_client_ID = bv2InfoList[1]
+                    temp_BV_compute_host = bv2InfoList[2]
+                    temp_BV_segment_ID = bv2InfoList[3]
+                    temp_BV_dm_entry = bv2InfoList[4]
+                    logging.info("Found a BV, %s, that exclusively belongs"
+                                 " to the volume, but there is no certainty"
+                                 " that it will be attached"
+                                 % bv2InfoList)
+
+            # Step 2 (see above): now check that all the BVs comprising the
+            # nova volume have at least one attachment.
+            if temp_BV_client_ID and bvs_in_stack == bvs_open:
+                logging.info("The volume is attached (bock-admin POV),"
+                             " host %s" % temp_BV_compute_host)
+                self.bock_admin_response['BV_client_ID'] = temp_BV_client_ID
+                self.bock_admin_response['BV_compute_host'] =\
+                    temp_BV_compute_host
+                bv_compute_host = temp_BV_compute_host
+                self.bock_admin_response['BV_segment_ID'] = temp_BV_segment_ID
+                self.bock_admin_response['BV_dm_entry'] = temp_BV_dm_entry
+            else:
+                logging.info("The volume is not attached (bock-admin POV)")
+
+            # convert BVM_ID to form used by crm
+            if self.bock_admin_response['BVM_ID'] is not None:
+                bvmID_match = bvmID_c.match(self.bock_admin_response['BVM_ID'])
+                if bvmID_match is None:
+                    continue
+                bvmID_number = bvmID_match.group('Num')
+                bvmID_letter = bvmID_match.group('Letter')
+                self.BVMSERVER_key = (("BVM_SERVER%s-%s") %
+                                     (bvmID_number, bvmID_letter))
+            self._find_BVM_host()
+
+            if (bv_compute_host and 'compute' in bv_compute_host):
+                self.compute_hostname = (("%s%s") %
+                                        (bv_compute_host,
+                                         self.hostname_suffix))
+
+        logging.info("Bock Admin POV:\n %s" % self.bock_admin_response)
+
+    def _get_BVM_servers(self, bock_crm_node):
+        """
+        Need to match Bock Pods to actual servers
+        i.e for line:
+        BVM_SERVER3-B   (ocf::bock:bock-bvmserver):\
+        Started bk-ae1-2az1-storage0009
+        enter 'BVM_SERVER3-B' : 'bk-ae1-2az1-storage0009' in Dict
+        """
+        cmd = ("sudo crm status")
+        response, err = self._exec_ssh_cmd(bock_crm_node, cmd)
+        logging.debug(("running:\n%s\non: %s\nresponse:\n%s") %
+                      (cmd, bock_crm_node, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _get_BVM_servers:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        if 'BVM_SERVER' in response:
+            lines = [s for s in response.split('\n')
+                     if s and 'BVM_SERVER' in s]
+            for line in lines:
+                bvmServerList = line.split()
+                self.bvmServerDict[bvmServerList[0]] = bvmServerList[3]
+
+    def _search_bvmServerDict_for_BVMSERVER_key(self):
+        """
+        BVMSERVER_key comes form bock-admin listing of basic-vols
+        """
+        for key in self.bvmServerDict:
+            if self.BVMSERVER_key in key:
+                self.bvmserver = self.bvmServerDict[key]
+                logging.debug(("_search_bvmServerDict_for_BVMSERVER_key: "
+                               "%s %s") % (key, self.bvmserver))
+                return True
+        return False
+
+    def _find_BVM_host(self):
+        """
+        Get machine running the BVM for this volume
+        """
+        self._get_BVM_servers(self.bock_admin_node)
+
+        if (self._search_bvmServerDict_for_BVMSERVER_key()):
+            return
+        elif self.bock_secondary_crm is not None:
+            self._get_BVM_servers(self.bock_secondary_crm)
+            self._search_bvmServerDict_for_BVMSERVER_key()
+
+    def _grep_qemu_xml(self, search_string):
+        cmd = (("sudo grep %s /etc/libvirt/qemu/*") %
+               (search_string))
+
+        response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.compute_hostname, response))
+        if 'exception' in response:
+            logging.error(("Exception in _get_qemu_xml_file:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+        return response, err
+
+    def _get_qemu_xml_file(self):
+        """
+        xml for a non-running instance lives in /etc/libvirt/qemu
+        Find the file name and also kvm short name
+        """
+        response, err = self._grep_qemu_xml(self.volume_hex)
+
+        if 'instance' not in response and self.simple_BV_ID is not None:
+            response = self._grep_qemu_xml(self.simple_BV_ID)
+
+        elif 'instance' not in response and self.instance_hex is not None:
+            response = self._grep_qemu_xml(self.instance_hex)
+
+        if 'instance' in response:
+            qemu_xml_file_match = qemu_xml_c.match(response)
+            if qemu_xml_file_match is not None:
+                self.qemu_xml_file = \
+                    (qemu_xml_file_match.group('virsh_short'))
+                self.kvm_short = self.qemu_xml_file.split('.')[0]
+
+            self._get_qemu_xml()
+
+    def _get_virsh_short(self, response):
+        """
+        pull virsh short name from response to 'virsh list'
+        """
+        self.virsh_short = response.split()[0]
+        logging.debug(("get_virsh_short: response:\n%s\nvirsh_short: %s\n") %
+                      (response, self.virsh_short))
+
+    def _check_running(self):
+        """
+        check if instance is running. If it is, we can get the xml for the
+        instance using 'virsh dumpxml'
+        """
+        if self.kvm_short is not None:
+            cmd = ("sudo virsh list |grep %s" % self.kvm_short)
+
+            response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (cmd, self.compute_hostname, response))
+
+            if 'exception' in response:
+                logging.error(("Exception in _check_running:\n"
+                              "response:%s\nerr:%s\n") % (response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+            elif 'running' in response:
+                self.instance_running = True
+                self._get_virsh_short(response)
+                if self.virsh_short is not None:
+                    self._get_virsh_xml()
+        return
+
+    def _have_qemu_xml(self):
+        return self.qemu_xml is not None
+
+    def _have_virsh_xml(self):
+        return self.virsh_xml is not None
+
+    def _get_qemu_xml(self):
+        """
+        get xml from static file, which is not as up-to-date as running
+        instance using 'virsh dumpxml'
+        """
+        cmd = ("sudo cat /etc/libvirt/qemu/%s" % self.qemu_xml_file)
+
+        response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+        logging.debug(("running:\n%s\non: %s\nresponse:\n%s") %
+                      (cmd, self.compute_hostname, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _get_qemu_xml:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        if 'name' in response:
+            self.qemu_xml = response
+            self._get_qemu_xml_disks()
+
+    def _get_virsh_xml(self):
+        """
+        get xml for running instance
+        """
+        cmd = ("sudo virsh dumpxml %s" % self.virsh_short)
+
+        response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+        logging.debug(("running:\n%s\non: %s\nresponse:\n%s") %
+                      (cmd, self.compute_hostname, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _get_virsh_xml:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        if 'name' in response:
+            self.virsh_xml = response
+            self._get_virsh_xml_disks()
+
+    def _get_qemu_xml_disks(self):
+        """
+        get disk devices from static qemu xml file
+        code for this function and get_virsh_xml_disks can probably be combined
+        """
+        tree = ET.fromstring(self.qemu_xml)
+        source_file = None
+
+        for disk in tree.iter('disk'):
+            source = disk.find('source')
+            source_file = source.get('dev')
+            target = disk.find('target')
+            target_dev = target.get('dev')
+            if source_file:
+                self.disk_devices[target_dev] = source_file
+            if (source_file and self.simple_BV_ID is not None
+               and self.volume in source_file):
+                self.instance_qemu_xml_device_mounted = True
+                self.qemu_xml_disk = target_dev
+                self.qemu_xml_source_file = source_file
+
+        logging.info("get_qemu_xml_disks Disks:\n%s" % self.disk_devices)
+
+    def _get_virsh_xml_disks(self):
+        """
+        get disk devices from running 'virsh dumpxml'
+        code for this function and get_qemu_xml_disks can probably be combined
+        """
+        tree = ET.fromstring(self.virsh_xml)
+        source_file = None
+
+        for disk in tree.iter('disk'):
+            source = disk.find('source')
+            source_file = source.get('dev')
+            target = disk.find('target')
+            target_dev = target.get('dev')
+            if source_file:
+                self.virsh_disk_devices[target_dev] = source_file
+            if (source_file and self.simple_BV_ID is not None
+                    and self.volume in source_file):
+                    self.instance_virsh_xml_device_mounted = True
+                    self.virsh_xml_disk = target_dev
+                    self.virsh_xml_source_file = source_file
+
+        logging.info("get_virsh_xml_disks: Disks:\n%s" %
+                     self.virsh_disk_devices)
+
+    def _check_block_dev_holders(self, ls_response):
+        """
+        look for holders on the block device, which requires a reboot to
+        cleanup references
+        """
+        dm_device = None
+        lines = [s for s in ls_response.split('\n') if s and 'cow' not in s]
+        for line in lines:
+            devHolders_match = devHolders_c.match(ls_response)
+            if devHolders_match is None:
+                logging.info("check_block_dev_holders Failed to match")
+                return
+
+            dm_device = devHolders_match.group('device')
+
+        if dm_device is None:
+            return
+        cmd = ("ls /sys/block/%s/holders" % dm_device)
+
+        response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.compute_hostname, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _check_block_dev_holders:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        if response.strip() is not '':
+            self.dev_holders = response.strip()
+
+    def _check_dev_mapper_exists(self, mapper_device):
+        """
+        Is there a device mapped for this volume?
+        """
+        if mapper_device is not None:
+            cmd = ("ls -l /dev/mapper/* | grep %s" %
+                   mapper_device)
+
+            response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (cmd, self.compute_hostname, response))
+
+            if 'exception' in response:
+                logging.error(("Exception in _check_dev_mapper_exists:\n"
+                              "response:%s\nerr:%s\n") % (response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+                return False
+
+            if 'mapper' in response:
+                self.mapped_device_exists = True
+                self.mapped_device = mapper_device
+                self._check_block_dev_holders(response)
+                return True
+            else:
+                return False
+
+    def _get_fuser_dev_mapper(self):
+        """
+        look for users on the mapped block device, which requires a reboot
+        to cleanup references
+        """
+        cmd = (("sudo fuser /dev/mapper/%s") %
+               (self.mapped_device))
+
+        response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.compute_hostname, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _get_fuser_dev_mapper:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        if response is not '':
+            self.fuser_dev_mapper = response
+
+    def _get_dmsetup_info(self):
+        cmd = (("sudo dmsetup info %s") %
+               (self.simple_BV_ID))
+
+        response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.compute_hostname, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _get_dmsetup_info:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+    def _get_instance_from_fuser(self):
+        """
+        fuser gets a pid, which shows kvm command, which contains instance UUID
+        """
+        uuid = None
+
+        if self.kvm_short is not None:
+            cmd = (("ps -ef |grep %s") % (self.kvm_short))
+        elif self.fuser_dev_mapper is not None:
+            cmd = (("ps -ef |grep %s") % (self.fuser_dev_mapper))
+        else:
+            return
+
+        response, err = self._exec_ssh_cmd(self.compute_hostname, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.compute_hostname, response))
+
+        if 'exception' in response:
+            logging.error(("Exception in _get_instance_from_fuser:\n"
+                          "response:%s\nerr:%s\n") % (response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return
+
+        kvmUUID_match = kvmUUID_c.match(response)
+
+        if kvmUUID_match is not None:
+            uuid = kvmUUID_match.group('uuid')
+
+        if uuid is not None:
+            self.instance_ID = uuid
+            self.get_instance_hex()
+
+    def get_compute_host_info(self):
+        """
+        If we have a compute host, gather info
+        """
+        volume_dash_volume_hex = ("volume-%s" % self.volume_hex)
+        if not self._check_dev_mapper_exists(volume_dash_volume_hex):
+            self._check_dev_mapper_exists(self.simple_BV_ID)
+        self._get_fuser_dev_mapper()
+        self._get_qemu_xml_file()
+        if self.instance_hex is None:
+            self._get_instance_from_fuser()
+        self._check_running()
+        self._get_dmsetup_info()
+
+#       Below doesn't work..run command and get json parse error
+#       cmd = (("sudo virsh qemu-monitor-command --domain %s "
+#               "--cmd 'info pci'") % self.virsh_short)
+
+#       response = self._exec_ssh_cmd(self.compute_hostname, cmd)
+#       logging.info("KVM pci state:\n%s" % response)
+
+#       Wiki links and Use Cases
+
+    def _use_case_cinder_attaching_not_attached(self):
+        msg = ("Use Cases and Wiki Links:\n"
+               "  Cinder Vol, stuck attaching, BV, "
+               "no compute_host\n"
+               "https://wiki.hpcloud.net/x/GztYAQ\n"
+               "  Cinder Vol, stuck attaching, no BV, "
+               "no compute_host\n"
+               "https://wiki.hpcloud.net/x/6jlYAQ\n")
+        return msg
+
+    def _use_case_cinder_detaching_still_attached(self):
+        msg = ("Use Cases and Wiki Links:\n"
+               "  Cinder Vol, stuck detaching, /dev/mapper exists, "
+               "fuser shows pid,\n  maybe have /sys/block/<dev>/holders and"
+               "qemu xml shows BV device\n"
+               "  https://wiki.hpcloud.net/x/1jlYAQ\n")
+        return msg
+
+    def _use_case_cinder_creating_deleting_not_created(self):
+        msg = ("Use Cases and Wiki Links:\n"
+               "  Cinder Vol, stuck creating, no BV "
+               "https://wiki.hpcloud.net/x/PjtYAQ\n"
+               "  Cinder Vol, stuck deleting, no BV "
+               "https://wiki.hpcloud.net/x/TjtYAQ\n")
+        return msg
+
+    # Messages for Recommended Actions
+    def _no_VDM_found_msg(self):
+        msg = (("Could not find vdms using bock-admin.\n"
+               "This indicates a problem with accessing bock-admin on %s\n"
+               "An accurate diagnosis of the stuck volume is not possible.\n")
+               % (self.bock_admin_node))
+        return msg
+
+    # check_cmd may not be necessary once nova cleanup (BOCK-4679) is done
+    # as all methods may call this method with exactly the same value in it
+    def _set_and_check_status(self, fix_cmd, check_cmd, scp_note_str=""):
+        """
+        Modifies status in Cinder DB by running fix_cmd and checks if
+        the resulting status changed as expected by running check_cmd
+        """
+        fix_msg = (("\nClean up Cinder DB on %s needed:\n" + self.exec_str +
+                    " %s\n") % (self.cinder_volume_status_node, fix_cmd))
+        check_msg = (("Confirmation, on the same node\n" + self.exec_str +
+                      " %s\n") % check_cmd)
+        if not self.fix_mode:
+            msg = fix_msg + check_msg
+            if scp_note_str:
+                msg += "NOTE: You may need to scp %s from the"\
+                       " Bock repo bin/ directory\n" % scp_note_str
+            return msg
+        msg = fix_msg
+        response, err = self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                           fix_cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (fix_cmd, self.cinder_volume_status_node, response))
+        if 'exception' in response:
+            # Case A: Volume state cannot be cleared in cinder DB
+            logging.error(("Exception in %s while executing %s:\n"
+                          "response:%s\nerr:%s\n") %
+                          (sys._getframe().f_code.co_name, fix_cmd,
+                           response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return msg
+
+        # Case B: Regular flow for general case (as opposed to Case A)
+        msg += check_msg
+        if(_isLogEnabledFor()):
+            msg += "See output from the command above\n"
+
+        response, err = self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                           check_cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (check_msg, self.cinder_volume_status_node, response))
+
+        if self.cinder_status.strip() in response:
+            logging.error(("Exception in %s while executing %s:\n"
+                          "response:%s\nerr:%s\n") %
+                          (sys._getframe().f_code.co_name, check_cmd,
+                           response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+        return msg
+
+    def _cinder_clear_attaching_detaching(self):
+        # Case #1: Volume non attached, but cinder DB state is
+        # either "attaching" or "detaching", instead of "available"
+        fix_cmd = (("sudo cinder-set-volume-status -f clear-%s %s") %
+                   (self.cinder_status.strip(), self.volume))
+        check_cmd = (("sudo cinder-set-volume-status list-status %s") %
+                     (self.volume))
+        msg = self._set_and_check_status(fix_cmd, check_cmd,
+                                         "cinder-set-volume-status")
+        return msg
+
+    def _check_exit_condition(self, msg=None):
+        """
+        Exits if certain conditions are met. Those conditions may include
+        in the future the exception itself or something it contains. For that
+        to happen, the exception would have to be passed as an argument.
+        Also, if a msg is provided, it is printed before exiting.
+        """
+        # The condition is now almost equivalent to a True
+        if(self.fix_mode or self.in_data_collection_phase):
+            if msg is not None:
+                logging.error(msg)
+            logging.error("\n*** An excepton has occurred. Exiting... ***\n")
+            exit(1)
+
+    def _cinder_clear_creating_deleting(self):
+        """
+        Case #2: Volume non attached, but cinder DB state is
+        either "creating" or "deleting", instead of "available".
+        If there are BVs associated with the volume, it will be set
+        to "error" in the Cinder DB; if not, it will be deleted
+        """
+        if self.simple_BV_ID is None:
+            logging.info("There are no BVs associated with volume %s" %
+                         self.volume)
+            return self._cinder_del_creating_deleting()
+        else:
+            logging.info("There are BVs associated with volume %s" %
+                         self.volume)
+            return self._cinder_set_error_creating_deleting()
+
+    def _cinder_del_creating_deleting(self):
+        """
+        Deletes a volume
+        """
+        del_cmd = (("sudo cinder-manage volume delete %s") % self.volume)
+        if 'creating' in self.cinder_status:
+            sub_cmd = (("sudo cinder-set-volume-status clear-creating %s") %
+                       self.volume)
+        else:
+            sub_cmd = (("sudo cinder-set-volume-status clear-deleting %s") %
+                       self.volume)
+        chk_status_cmd = (("sudo cinder-set-volume-status list-status %s")
+                          % self.volume)
+        chk_del_cmd = (("sudo cinder-manage volume list | grep %s")
+                       % self.volume)
+
+        del_msg = (("\nOn %s:\n" + self.exec_str + " %s\n") %
+                   (self.cinder_volume_status_node, del_cmd))
+        notfound_msg = (("Bock BV has never been created. So:\n"
+                         "On %s:\n" + self.exec_str + " %s\n") %
+                        (self.cinder_volume_status_node, sub_cmd))
+        chk_status_msg = (("Confirmation on the same node:\n" + self.exec_str +
+                           " %s %s\n") % (chk_status_cmd, self.volume))
+        chk_del_msg = (("Confirmation, on the same node\n"
+                        + self.exec_str + " %s\n") % chk_del_cmd)
+
+        if not self.fix_mode:
+            msg = del_msg + chk_del_msg + "If the volume delete fails, "\
+                + notfound_msg + "NOTE: You may need to scp cinder-set"\
+                "-volume-status from the Bock repo bin/ directory.\n"\
+                + chk_status_msg
+            if self.print_wiki_links:
+                msg += self._use_case_cinder_creating_deleting_not_created()
+            return msg
+        msg = del_msg
+        response, err = self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                           del_cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (del_cmd, self.cinder_volume_status_node, response))
+
+        if 'VolumeNotFound' in response:
+            # Cases #2A and 2B: Case 2, plus if cinder DB state is "creating"
+            # this would be Case #2A; if "deleting", Case #2B
+            msg += notfound_msg
+
+            response, err = self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                               sub_cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (sub_cmd, self.cinder_volume_status_node, response))
+
+            msg += chk_status_msg
+            if(_isLogEnabledFor()):
+                msg += "See output from the command above\n"
+            response, err = self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                               chk_status_cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (chk_status_cmd, self.cinder_volume_status_node,
+                          response))
+
+            if self.cinder_status.strip() in response:
+                logging.error(("Exception in _cinder_del_creating_deleting"
+                               " while executing %s:\n response:%s\nerr:%s\n")
+                              % (chk_status_cmd, response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+            return msg
+        elif 'exception' in response:
+            # Case #2D
+            logging.error(("***Exception in "
+                           "_cinder_del_creating_deleting"
+                           " while executing %s:\n"
+                           "response:%s\nerr:%s\n") % (del_cmd, response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return msg
+        else:
+            # Case #2C: Case 2, and volume was found.
+            msg += chk_del_msg
+            if(_isLogEnabledFor()):
+                msg += "See output from the command above\n"
+
+            response, err = self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                               chk_del_cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (chk_del_cmd, self.cinder_volume_status_node,
+                          response))
+
+            if self.volume in response:
+                logging.error(("Exception :\nresponse:%s\nerr:%s\n") %
+                              (response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+            return msg
+
+    def _cinder_set_error_creating_deleting(self):
+        """
+        It sets a volume with status creating/deleting -> error
+        in the Cinder DB
+        """
+        # Case #2E: there are BVs associated with the volume
+        msg = ""
+        if self.cinder_provider_location == 'None':
+            # Case #2E1: BVs associated with the volume but
+            # no provider location
+            msg += "No provider location for %s in the Cinder DB."\
+                   " It needs fixing."\
+                   % self.volume
+            if self.fix_mode:
+                msg += "\nTrying to fix it..."
+            if self.vdm is None:
+                logging.error("***Exception: BVs are associated with"
+                              " the volume but the Cinder DB contains no"
+                              " location, and no information about its value"
+                              " is available.")
+                self.exceptions += 1
+                self._check_exit_condition()
+                return msg
+            prov_cmd = ("sudo cinder-set-volume-status "
+                        "volume-set-provider %s %s" %
+                        (self.volume, self.vdm))
+            prov_msg = (("\nOn %s:\n" + self.exec_str + " %s\n") %
+                        (self.cinder_volume_status_node, prov_cmd))
+            msg += "\nVolume %s is missing its provider location in "\
+                   "the Cinder DB. It must be set to %s:" %\
+                   (self.volume, self.vdm)
+            msg += prov_msg
+            if self.fix_mode:
+                response, err = \
+                    self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                       prov_cmd)
+                logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                             (prov_cmd, self.cinder_volume_status_node,
+                              response))
+                if 'exception' in response:
+                    logging.error(("***Exception while executing %s:\n"
+                                   "response:%s\nerr:%s\n")
+                                  % (prov_cmd, response, err))
+                    self.exceptions += 1
+                    self._check_exit_condition()
+                    return msg
+        # We can safely assume we have a provider location now
+        # Calling one or the other may not make any difference
+        # now but it might in the future:
+        if 'creating' in self.cinder_status:
+            set_error_cmd = ("sudo cinder-set-volume-status "
+                             "creating-set-to-error %s -f" %
+                             self.volume)
+        else:
+            set_error_cmd = ("sudo cinder-set-volume-status "
+                             "deleting-set-to-error %s -f" %
+                             self.volume)
+        set_error_msg = (("\nOn %s:\n" + self.exec_str + " %s\n") %
+                         (self.cinder_volume_status_node, set_error_cmd))
+        msg += "Cinder status must be set to error for volume %s:"\
+               % self.volume
+        msg += set_error_msg
+        if self.fix_mode:
+            response, err = self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                               set_error_cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (set_error_cmd, self.cinder_volume_status_node,
+                          response))
+            if 'exception' in response:
+                logging.error(("***Exception in "
+                               "_cinder_set_error_creating_deleting"
+                               " while executing %s:\n"
+                               "response:%s\nerr:%s\n")
+                              % (set_error_cmd, response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+            elif 'usage: cinder-set-volume-status' in err:
+                logging.error(("***Error while executing %s:\n"
+                               "response:%s\nerr:%s\n")
+                              % (set_error_cmd, response, err))
+                logging.error("You may have a wrong version of "
+                              "cinder-set-volume-status in %s "
+                              "(one that does not support the options"
+                              " provided). Please check that you have "
+                              "the latest version" %
+                              self.cinder_volume_status_node)
+                self.exceptions += 1
+                self._check_exit_condition()
+        return msg
+
+    # This will be removed during the cleanup of BOCK-4679
+    def _nova_clear_attaching_detaching_msg(self):
+        msg = (("Cleanup Nova DB on %s with:\n"
+                "  sudo ./bock-set-volume-status -f clear-%s %s\n"
+                "NOTE: You may need to scp bock-set-volume-status from the "
+                " Bock repo bin/ directory\n"
+                "Run the following to confirm:\n"
+                "  sudo ./bock-set-volume-status list-status %s\n") %
+               (self.nova_volume_status_node, self.nova_status.strip(),
+                self.volume, self.volume))
+        return msg
+
+    # This will be removed during the cleanup of BOCK-4679
+    def _nova_clear_attaching_detaching_exec(self):
+        # Case #3: Not worth describing - this function will dissapear
+        msg = (("\nCleaning up Nova DB on %s with:\n" + self.exec_str +
+                " sudo ./bock-set-volume-status -f clear-%s %s\n") %
+               (self.nova_volume_status_node, self.nova_status.strip(),
+                self.volume))
+        cmd = (("sudo ./bock-set-volume-status -f clear-%s %s") %
+               (self.nova_status.strip(), self.volume))
+
+        response, err = self._exec_ssh_cmd(self.cinder_volume_status_node, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.cinder_volume_status_node, response))
+
+        if 'exception' in response:
+            # Case #3A: Not worth describing - this function will dissapear
+            logging.error(("Exception in "
+                           "_nova_clear_attaching_detaching_exec"
+                           " while executing %s:\n"
+                           "response:%s\nerr:%s\n") % (cmd, response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return msg
+        else:
+            # Case #3B: Not worth describing - this function will dissapear
+            msg += (("Confirmation on the same node:\n" + self.exec_str +
+                    " sudo ./bock-set-volume-status list-status %s\n") %
+                   (self.volume))
+            if(_isLogEnabledFor()):
+                msg += "See output from the command above\n"
+            cmd = (("sudo ./bock-set-volume-status list-status %s") %
+                   (self.volume))
+
+            response, err = self._exec_ssh_cmd(self.nova_volume_status_node,
+                                               cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (cmd, self.nova_volume_status_node, response))
+
+            if self.nova_status.strip() in response:
+                logging.error(("Exception in "
+                               "_nova_clear_attaching_detaching_exec"
+                               " while executing %s:\n"
+                               "response:%s\nerr:%s\n") % (cmd, response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+            return msg
+
+    # This will be removed during the cleanup of BOCK-4679
+    def _nova_clear_creating_deleting_msg(self):
+        msg = (("Run the following on %s:\n"
+                "  sudo nova-manage volume delete %s\n"
+                "Run the following to confirm:\n"
+                "  sudo nova-manage volume list | grep %s\n") %
+               (self.nova_volume_status_node,
+                self.volume, self.volume))
+        return msg
+
+    # This will be removed during the cleanup of BOCK-4679
+    def _nova_clear_creating_deleting_exec(self):
+        # Case #4: Not worth describing - this function will dissapear
+        msg = (("\nOn %s:\n" + self.exec_str +
+                " sudo nova-manage volume delete %s\n") %
+               (self.nova_volume_status_node, self.volume))
+        cmd = (("sudo nova-manage volume delete %s") % self.volume)
+        response, err = self._exec_ssh_cmd(self.nova_volume_status_node, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.nova_volume_status_node, response))
+
+        if 'exception' in response:
+            # Case #4A: Not worth describing - this function will dissapear
+            logging.error(("Exception in "
+                           "_nova_clear_creating_deleting_exec"
+                           " while executing %s:\n"
+                           "response:%s\nerr:%s\n") % (cmd, response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return msg
+        else:
+            # Case #4B: Not worth describing - this function will dissapear
+            msg += (("Confirmation on the same node:\n" + self.exec_str +
+                    " sudo nova-manage volume list | grep %s\n") %
+                   (self.volume))
+            if(_isLogEnabledFor()):
+                msg += "See output from the command above\n"
+            cmd = (("sudo nova-manage volume list | grep %s") %
+                   (self.volume))
+            response, err = self._exec_ssh_cmd(self.nova_volume_status_node,
+                                               cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (cmd, self.nova_volume_status_node, response))
+
+            if self.volume in response:
+                logging.error(("Exception in "
+                               "_nova_clear_creating_deleting_exec"
+                               " while executing %s:\n"
+                               "The volume hasn't been deleted"
+                               "response:%s\nerr:%s\n") % (cmd, response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+            return msg
+
+    def _cinder_clear_error_deleting(self):
+        # Case #5: Volume non attached, but cinder DB state is
+        # "error_deleting", instead of "available"
+        fix_cmd = (("sudo cinder-set-volume-status clear-deleting %s") %
+                   (self.volume))
+        check_cmd = (("sudo cinder-set-volume-status list-status %s") %
+                     (self.volume))
+        msg = self._set_and_check_status(fix_cmd, check_cmd,
+                                         "cinder-set-volume-status")
+        return msg
+
+    # This will be RENAMED during the cleanup of BOCK-4679
+    def _cinder_or_nova_rollback_detaching(self):
+        # Case #6: Volume attached, but cinder DB state is "detaching",
+        # instead of "in-use"
+        if self.is_cinder():
+            command = "cinder-set-volume-status"
+        # This will be removed during the cleanup of BOCK-4679
+        elif self._is_nova():
+            command = "bock-set-volume-status -f"
+        fix_cmd = (("sudo %s rollback-detaching %s") % (command, self.volume))
+        check_cmd = (("sudo %s list-status %s") % (command, self.volume))
+        msg = self._set_and_check_status(fix_cmd, check_cmd,
+                                         "cinder-set-volume-status")
+        return msg
+
+    # This will be RENAMED during the cleanup of BOCK-4679
+    def _cinder_or_nova_rollforward_attaching(self):
+        # Case #7: Volume attached, but cinder DB state is "attaching",
+        # instead of "in-use"
+        if self.is_cinder():
+            command = "cinder-set-volume-status"
+        # This will be removed during the cleanup of BOCK-4679
+        elif self._is_nova():
+            command = "bock-set-volume-status -f"
+        fix_cmd = (("sudo %s rollforward-attaching %s %s") %
+                   (command, self.volume, self.instance_ID))
+        check_cmd = (("sudo %s list-status %s") % (command, self.volume))
+        msg = self._set_and_check_status(fix_cmd, check_cmd,
+                                         "cinder-set-volume-status")
+        return msg
+
+    def _automatic_nova_reboot(self, retry):
+        """
+        Please consider the implications of using this function
+        (see below).
+        It hard reboots the node in which the instance the volume
+        is attached to resides. It is meant to be used from
+        _cleanup_dev_mapper.
+        This function is not being used at the moment because
+        it may be risky (a customer may be using some of the
+        machines in the batch). However, it has not been deleted
+        in case it is useful in the future (maybe with the addition
+        of a confirmation dialog).
+        """
+        msg = ""
+        if retry is True:
+            ostack_client_host = "127.0.0.1"
+            msg += ((" Command failed with a device busy error\n"
+                     " Rebooting the instance from %s:\n"
+                     + self.exec_str + " nova reboot --hard %s\n") %
+                    (ostack_client_host, self.instance_ID))
+            cmd = (("nova reboot --hard %s") % self.instance_ID)
+
+            response, err = self._exec_ssh_cmd(ostack_client_host, cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (cmd, self.cinder_volume_status_node, response))
+            error_line = err.read()
+            if 'ERROR' in error_line:
+                logging.error(("Exception in _automatic_nova_reboot"
+                               " while executing: %s\n from :%s\n"
+                               "Response:%sErr:%s\n") %
+                              (cmd, ostack_client_host, response, error_line))
+                self.exceptions += 1
+                self._check_exit_condition()
+            msg += (" Re-running bocktool:\n")
+            msg += self._cleanup_dev_mapper_exec(False)
+        else:
+            msg += (" Command failed with a device busy error\n"
+                    " Nothing to do; rebooting already attempted\n")
+        return msg
+
+    def _cleanup_dev_mapper(self, retry=True):
+        # Case #8 /dev/mapper exists on compute host, need bock cleanup,
+        # then cleanup DB
+        fix_cmd = (("sudo bocktool --detach --volumes volume-%s --vdm %s")
+                   % (self.volume_hex, self.vdm))
+        manual_cmd = (" nova reboot --hard %s\n" % self.instance_ID)
+        check_cmd = (("bock-admin --url http://127.0.0.1:9295 basic-vols"
+                      " --vdm_id %s volume-%s") % (self.vdm, self.volume_hex))
+
+        fix_msg = (("\n/dev/mapper/%s device exists.\nClean up on %s needed\n")
+                   % (self.mapped_device, self.compute_hostname)) +\
+            self.exec_str + fix_cmd
+        reboot_msg = ((" Reboot instance on %s\n" + manual_cmd) %
+                      self.compute_hostname) + " Rerun this tool once all"\
+            " manual actions have taken place\n"
+        check_msg = (("Confirmation that basic volume is not mounted by "
+                      "executing\non %s:\n" + self.exec_str + check_cmd) %
+                     (self.bock_admin_node))
+
+        if(not self.fix_mode):
+            msg = fix_msg + "\nIf this fails with a device busy error, you"\
+                " havea reference on the volume. \n " + reboot_msg + check_msg
+            return msg
+
+        msg = fix_msg
+        response, err = self._exec_ssh_cmd(self.compute_hostname, fix_cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (fix_cmd, self.compute_hostname, response))
+
+        if 'device busy' or 'Device or resource busy' in response:
+            # Case #8A: Case 8, plus there is still a reference
+            # to the volume
+            logging.error(("Exception in _cleanup_dev_mapper:\n"
+                           " while executing %s:\n"
+                           " Command failed with a device busy error\n"
+                           "Response:%sErr:%s") % (fix_cmd, response, err))
+            logging.error(" Please reboot manually:" + manual_cmd)
+            self.exceptions += 1
+            self._check_exit_condition()
+            msg += self.manual_action_str + reboot_msg
+            #msg += self._automatic_nova_reboot(retry)
+
+        msg += check_msg
+        if(_isLogEnabledFor()):
+            msg += "See output from the command above\n"
+
+        response, err = self._exec_ssh_cmd(self.bock_admin_node,
+                                           check_cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (check_cmd, self.bock_admin_node, response))
+        if 'deleting' in response:
+            # Case #8B: Case 8, plus the volume is still in
+            # "deleting" state
+            logging.error(("Exception in _cleanup_dev_mapper"
+                           " while executing %s:\n"
+                           "The volume is still in deleting state.\n"
+                           "Response:%sErr:%s\n") % (check_cmd, response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+        return msg
+
+    def _cinder_clear_in_use(self):
+        # Case #9: Volume not attached, but cinder DB state is "in-use",
+        # instead of "available"
+        fix_cmd = (("sudo cinder-set-volume-status -f clear-in-use %s") %
+                   (self.volume))
+        check_cmd = (("sudo cinder-set-volume-status list-status %s") %
+                     (self.volume))
+        msg = self._set_and_check_status(fix_cmd, check_cmd,
+                                         "cinder-set-volume-status")
+        return msg
+
+    # This will be removed during the cleanup of BOCK-4679
+    def _nova_clear_in_use_msg(self):
+        msg = (("Cleanup Nova DB on %s with:\n"
+                "  sudo ./bock-set-volume-status -f clear-in-use %s\n"
+                "NOTE: You may need to scp bock-set-volume-status from the "
+                " Bock repo bin/ directory.\n"
+                "Verify that volume is available with:\n"
+                "  sudo ./bock-set-volume-status list-status %s\n") %
+               (self.nova_volume_status_node, self.volume, self.volume))
+        return msg
+
+    # This will be removed during the cleanup of BOCK-4679
+    def _nova_clear_in_use_exec(self):
+        # Case #10: Not worth describing - this function will dissapear
+        msg = (("\nCleaning up Nova DB on %s with:\n" + self.exec_str +
+                " sudo ./bock-set-volume-status -f clear-in-use %s\n") %
+               (self.nova_volume_status_node, self.volume))
+        cmd = (("sudo ./bock-set-volume-status -f clear-in-use %s") %
+               (self.volume))
+
+        response, err = self._exec_ssh_cmd(self.cinder_volume_status_node, cmd)
+        logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                     (cmd, self.cinder_volume_status_node, response))
+
+        if 'exception' in response:
+            # Case #10A: Not worth describing - this function will dissapear
+            logging.error(("Exception in _nova_clear_in_use_exec:\n"
+                           "whihle executing %s"
+                           "response:%s\nerr:%s\n") % (cmd, response, err))
+            self.exceptions += 1
+            self._check_exit_condition()
+            return msg
+        else:
+            # Case #10B: Not worth describing - this function will dissapear
+            msg += (("Verifying on the same node that volume is available"
+                    "with:\n" + self.exec_str +
+                    " sudo ./bock-set-volume-status list-status %s\n") %
+                   (self.volume))
+            cmd = (("sudo ./bock-set-volume-status list-status %s") %
+                   (self.volume))
+
+            response, err = self._exec_ssh_cmd(self.cinder_volume_status_node,
+                                               cmd)
+            logging.info(("running:\n%s\non: %s\nresponse:\n%s") %
+                         (cmd, self.cinder_volume_status_node, response))
+
+            if 'in-use' in response:
+                # Case #10B1: Not worth describing - this function
+                # will dissapear
+                logging.error(("Exception in _nova_clear_in_use_exec"
+                               " while executing %s:\n"
+                               "The volume is still in in-use state.\n"
+                               "Response:%s\nerr:%s\n") % (cmd, response, err))
+                self.exceptions += 1
+                self._check_exit_condition()
+            return msg
+
+    # This will be RENAMED during the cleanup of BOCK-4679
+    def _cinder_or_nova_verify_and_fix(self):
+        # Case #11: Volume mounted in xml, but not in use
+        msg = self.manual_action_str
+        msg += ("\nCheck with Bock Team. Verify volume is attached"
+                "to instance. If investigation indicates, set volume"
+                " to attached in DB.\n")
+        return msg
+
+    # This will be RENAMED during the cleanup of BOCK-4679
+    def _cinder_or_nova_clear_db_msg(self):
+        msg = ""
+        if self.is_cinder():
+            if ('attaching' in self.cinder_status or
+                    'detaching' in self.cinder_status):
+                msg += self._cinder_clear_attaching_detaching()
+                if self.print_wiki_links:
+                    msg += self._use_case_cinder_attaching_not_attached()
+            elif 'error_deleting' in self.cinder_status:
+                msg += self._cinder_clear_error_deleting()
+            elif ('creating' in self.cinder_status or
+                    'deleting' in self.cinder_status):
+                msg += self._cinder_clear_creating_deleting()
+            elif 'in-use' in self.cinder_status:
+                msg += self._cinder_clear_in_use()
+        # This branch will be removed during the cleanup of BOCK-4679
+        elif self._is_nova():
+            if ('attaching' in self.nova_status or
+               'detaching' in self.nova_status):
+                if(self.fix_mode):
+                    msg += self._nova_clear_attaching_detaching_exec()
+                else:
+                    msg += self._nova_clear_attaching_detaching_msg()
+            elif ('creating' in self.nova_status or
+                    'deleting' in self.nova_status):
+                if(self.fix_mode):
+                    msg += self._nova_clear_creating_deleting_exec()
+                else:
+                    msg += self._nova_clear_creating_deleting_msg()
+            elif 'in-use' in self.nova_status:
+                if(self.fix_mode):
+                    msg += self._nova_clear_in_use_exec()
+                else:
+                    msg += self._nova_clear_in_use_msg()
+        return msg
+
+    def _xml_file_mismatch_msg(self):
+        msg = ("Mounted block volumes in xml files from "
+               "/libvirt/qemu/instance-<id> and 'virsh dumpxml' do not match."
+               " Please investigate.\n")
+        return msg
+
+    def _xml_source_files_dont_match(self):
+        if (self.qemu_xml_disk is None or self.virsh_xml_disk is None):
+            return False
+        if ((self.qemu_xml_disk != self.virsh_xml_disk) or
+           (self.qemu_xml_source_file != self.virsh_xml_source_file)):
+            return True
+        else:
+            return False
+
+    def _device_attached_and_in_use(self):
+        if (self.qemu_xml_disk is None and
+           self.virsh_xml_disk is None):
+            return False
+        if (self.instance_qemu_xml_device_mounted or
+                self.instance_virsh_xml_device_mounted):
+            return True
+
+    def _determine_recommended_action(self):
+        """
+        Analyze the data and determine what actions could/should be taken.
+        The recommended actions can be verified by running this tool in
+        verbose mode (-vv) and making sure the the data that is collected
+        is consistent with the tools recommendations.
+        """
+        msg = ""
+
+        # Couldn't get VDM, bock-admin problem, analysis is invalid
+        if self._no_VDM():
+            msg += self._no_VDM_found_msg()
+
+        # BV DB has no Basic Volume or
+        # BV DB has no compute host (no Bock attachment)
+        #   and cannot find compute host with stacky
+        elif (self._no_Basic_Volume() or
+                self.compute_hostname is None):
+            msg += self._cinder_or_nova_clear_db_msg()
+
+        # compute host exists
+        # xml shows instance and sees volume as mounted
+        #    and volume is stuck in attaching or detaching
+        # The nova conditionals will be removed during the cleanup of BOCK-4679
+        elif self._device_attached_and_in_use():
+            if ((self.is_cinder() and 'attaching' in self.cinder_status) or
+                    (self._is_nova() and 'attaching' in self.nova_status)):
+                msg += self._cinder_or_nova_rollforward_attaching()
+            elif ((self.is_cinder() and 'detaching' in self.cinder_status) or
+                    (self._is_nova() and 'detaching' in self.nova_status)):
+                msg += self._cinder_or_nova_rollback_detaching()
+
+        # /dev/mapper on compute host, need bock cleanup, then cleanup DB
+        elif self.mapped_device is not None:
+            msg += self._cleanup_dev_mapper()
+        # xml for instance does not have volume mounted
+            if (self.qemu_xml_disk is None and
+               self.virsh_xml_disk is None):
+                msg += self._cinder_or_nova_clear_db_msg()
+            # volume mounted in xml, but not in use
+            # this hasn't been seen and needs analysis
+            else:
+                msg += self._cinder_or_nova_verify_and_fix()
+
+        # no /dev/mapper device on compute host
+        elif self.mapped_device is None:
+            msg += self._cinder_or_nova_clear_db_msg()
+
+        # compare virsh dumpxml to /libvirt/qemu and report diff
+        if self._xml_source_files_dont_match():
+            msg += self._xml_file_mismatch_msg()
+
+        return msg
+
+    def create_report(self):
+        """
+        Print final report of data
+        """
+        print("Information for Bock volume %s:" % self.volume)
+        if self.exceptions == 1:
+            print("Found 1 exception. Run with verbose to investigate\n")
+        if self.exceptions > 1:
+            print("Found %d exceptions. Run with verbose to investigate\n" %
+                  self.exceptions)
+        if 'RabbitMQ' in self.rabbitmq_error:
+            print("RabbitMQ: %s" % self.rabbitmq_error)
+        if self.is_cinder():
+            print("Cinder Status: %s" % self.cinder_status)
+            print("Cinder Attach Status: %s" %
+                  self.cinder_attach_status)
+        # This will be removed during the cleanup of BOCK-4679
+        elif self._is_nova():
+            print("Nova Volume status: %s" % self.nova_status)
+
+        print("simple_BV_ID: %s" % self.simple_BV_ID)
+        print(("%s: %s") % (self.BVMSERVER_key, self.bvmserver))
+        print("Compute Instance ID: %s" % self.instance_ID)
+        print("Compute Host: %s" % self.compute_hostname)
+        if self.compute_hostname is not None:
+            print("Compute Instance Running: %s" %
+                  self.instance_running)
+            print("Compute Host /dev/mapper/ device: %s" %
+                  self.mapped_device)
+            if self.mapped_device_exists:
+                print("fuser /dev/mapper/<mapped_device>: %s" %
+                      self.fuser_dev_mapper)
+            print("Have /libvirt/qemu/<file> xml: %s" % self._have_qemu_xml())
+            print(("Instance /libvirt/qemu/<file> has xml "
+                   "for mounted volume: %s") %
+                  (self.instance_qemu_xml_device_mounted))
+            if self.instance_qemu_xml_device_mounted:
+                print(("  Device: %s\n  File mounted: %s\n") %
+                     (self.qemu_xml_disk, self.qemu_xml_source_file))
+            print("Have virsh dumpxml: %s" % self._have_virsh_xml())
+            print("Running Instance virsh dumpxml has  mounted volume: %s" %
+                  self.instance_virsh_xml_device_mounted)
+            if self.instance_virsh_xml_device_mounted:
+                print(("  Device: %s\n  File mounted: %s\n") %
+                     (self.virsh_xml_disk, self.virsh_xml_source_file))
+            print("/sys/block/<dev>/holders:\n %s" % self.dev_holders)
+
+        self.in_data_collection_phase = False
+        if(self.fix_mode):
+            print("\nExecuting commands to solve issues (if any)")
+            print("." * 80)
+        summary = ""
+        recommended_action = self._determine_recommended_action()
+        if recommended_action is None or recommended_action == "":
+            recommended_action = "None"
+        if(self.fix_mode):
+            summary += ("\nCommands executed (/pending) for %s:\n" %
+                        self.volume)
+            summary += ("-" * 80)+"\n"
+            summary += ("%s" % recommended_action)+"\n"
+        else:
+            summary += ("\nRecommended actions for %s:\n" % self.volume)
+            summary += ("-" * 80)+"\n"
+            summary += ("%s" % recommended_action)+"\n"
+        if self.exceptions == 1:
+            summary += ("Found 1 exception. Run with verbose to investigate\n")
+        if self.exceptions > 1:
+            summary += ("Found %d exceptions. Run with verbose to "
+                        "investigate\n" % self.exceptions)
+        return summary
+
+
+def configure_logging(args):
+    """This does a similar job to logging.basicConfig(),
+    setting default log level of DEBUG for root logger
+    and configuring handlers with appropriate formatters."""
+    ch = logging.StreamHandler(stream=sys.stdout)
+
+    # filter paramiko 'Exception: Error reading SSH protocol banner'
+    # messages which don't add anythng to our logs
+    logging.getLogger('paramiko.transport').addFilter(ParamikoFilter())
+
+    log.setLevel(logging.ERROR)
+    # if -vvvvv provide DEBUG output for paramiko transport,
+    # all libraries, and rabbitmq
+    if args.log_verbose >= 5:
+        logging.getLogger('paramiko.transport').setLevel(logging.DEBUG)
+        logging.getLogger('').setLevel(logging.DEBUG)
+        ch.setLevel(logging.DEBUG)
+    # if -vvvv provide DEBUG output for all libraries and rabbitmq,
+    # and INFO for paramiko transport
+    elif args.log_verbose >= 4:
+        logging.getLogger('paramiko.transport').setLevel(logging.INFO)
+        logging.getLogger('').setLevel(logging.DEBUG)
+        ch.setLevel(logging.DEBUG)
+    # if -vvv provide DEBUG output for volume_info and WARNING
+    #  for libraries
+    elif args.log_verbose >= 3:
+        logging.getLogger('paramiko.transport').setLevel(logging.WARNING)
+        logging.getLogger('').setLevel(logging.DEBUG)
+        ch.setLevel(logging.DEBUG)
+    # if -vv provide INFO output for stuck_volume_tool
+    elif args.log_verbose >= 2:
+        logging.getLogger('paramiko.transport').setLevel(logging.WARNING)
+        logging.getLogger('').setLevel(logging.INFO)
+        ch.setLevel(logging.INFO)
+    # if -v provide WARNING output for stuck_volume_tool
+    elif args.log_verbose >= 1:
+        logging.getLogger('paramiko.transport').setLevel(logging.WARNING)
+        logging.getLogger('').setLevel(logging.WARNING)
+        ch.setLevel(logging.WARNING)
+    ch_format = logging.Formatter('%(message)s')
+    ch.setFormatter(ch_format)
+    logging.getLogger('').addHandler(ch)
+
+
+def _execute_single_vol_info(args):
+    """
+    Displays volume information for a single volume
+    """
+    volume = args.volume
+    env = args.environment
+    print("\nProcessing Bock volume %s" % volume)
+    print("-" * 80)
+
+    SSO_user = args.user
+    if SSO_user is None:
+        SSO_user = raw_input("Enter your user name: ")
+
+    SSO_passwd = args.passwd
+    if SSO_passwd is None:
+        SSO_passwd = getpass.getpass("Password for %s:" % SSO_user)
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    status = CinderVolumeStatus(client, SSO_user, SSO_passwd,
+                                volume, env)
+    # This is what remains of the old per-volume log config:
+    if args.log_verbose >= 3:
+        status.print_wiki_links = True
+
+    if hasattr(status, env):
+        status.setup_env(**getattr(status, env))
+    else:
+        print "Unrecognised env: %s" % env
+        exit(1)
+
+    if args.fix:
+        status.fix_mode = True
+        status.exec_str = "=>COMMAND EXECUTED:\n"
+        status.manual_action_str = "=>PENDING MANUAL ACTION:\n"
+
+    if args.instance_ID:
+        status.instance_ID = args.instance_ID
+        status.get_instance_hex()
+    if args.compute_host:
+        status.set_compute_host_fqdn(args.compute_host)
+
+    status.get_bock_admin_status()
+    if args.snapshot_limit:
+        print (("%d snapshots taken (including deleted) %d snapshots left "
+                "before reaching limit of 10") %
+              (status.COW_count, (10 - status.COW_count)))
+        exit(0)
+    if status.is_cinder():
+        return_msg = status.get_cinder_volume_status()
+        if ('wrong' in return_msg or 'not found' in return_msg):
+            status.cinder_status = "unknown"
+            print return_msg
+    # This will be removed during the cleanup of BOCK-4679
+    elif status.nova_volume_status_node is not None:
+        return_msg = status.get_nova_volume_status()
+        if 'not found' in return_msg:
+            status.nova_status = "unknown"
+            print return_msg
+
+    if status.get_rabbitmq_status(status.rabbitmq) == 0 and\
+       status.get_rabbitmq_status(status.rabbitmq_secondary) == 0:
+            status.exceptions += 1
+            status._check_exit_condition()
+
+    if status.compute_hostname is not None:
+        status.get_compute_host_info()
+    elif status.instance_ID is not None:
+        status.get_host_from_stacky()
+        if status.compute_hostname is not None:
+            status.get_compute_host_info()
+
+    return status.create_report()
+
+
+def _isLogEnabledFor(level=logging.INFO):
+    return logging.getLogger('').isEnabledFor(level)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Find information for "
+                                                 "Cinder volume.")
+    exclusiongroup = parser.add_mutually_exclusive_group()
+
+    # This will be modified during the cleanup of BOCK-4679
+    exclusiongroup.add_argument("volume",
+                                nargs="?",
+                                help="Cinder volume uuid i.e. "
+                                "c9751158-c39e-4a33-859e-f3a92e82d2ff "
+                                " or Nova volume id i.e 121731")
+    parser.add_argument("-u", "--user",
+                        default=os.environ.get('SSO_USERNAME'),
+                        help="SSO short user name, defaults to environment"
+                        " variable SSO_USERNAME")
+    parser.add_argument("-e", "--environment",
+                        required=True,
+                        help="Environment to run in: ae1_2az1, ae1_2az2, "
+                        "ae1_2az3, aw2_2az1, aw2_2az2, aw2_2az3, stbaz1, "
+                        "stbaz2, aw2az1, aw2az2, aw2az3, rndeaz1")
+    parser.add_argument("-p", "--passwd",
+                        default=os.environ.get('SSO_PASSWORD'),
+                        help="SSO pasword, defaults to environment variable"
+                        " SSO_PASSWORD")
+    # This will possibly be removed during the cleanup of BOCK-4679
+    parser.add_argument("-i", "--instance_ID",
+                        help="Nova instance ID")
+    parser.add_argument("-c", "--compute_host",
+                        help="Nova compute short or long hostname")
+    parser.add_argument("-v", "--log_verbose",
+                        help="provide verbose console output "
+                        "(repeating increases detail)",
+                        action='count')
+    parser.add_argument("-s", "--snapshot_limit",
+                        help="Returns number of snapshots taken and "
+                        "number of snapshots left (total=10)",
+                        action='store_true')
+    exclusiongroup.add_argument("-b", "--batch",
+                                help="Batch mode. The name of the file that"
+                                "contains the IDs of the volumes that will be "
+                                "unstuck must be provided")
+    parser.add_argument("-f", "--fix",
+                        help="Fix mode. Commands to fix (unstick)"
+                        "will be executed (rather than displayed,"
+                        "as in the default behaviour)",
+                        action='store_true')
+
+    args = parser.parse_args()
+
+    summary = ""
+    configure_logging(args)
+    if(args.batch):
+        batch_file = args.batch
+        try:
+            with open(batch_file, "r") as file_object:
+                lines = file_object.readlines()
+                # Username and password, to prevent the program from asking
+                # for it multiple times:
+                if args.user is None:
+                    args.user = raw_input("Enter your user name: ")
+                if args.passwd is None:
+                    args.passwd = getpass.getpass("Password for %s:" %
+                                                 (args.user))
+                for line in lines:
+                    line_items = line.split()
+                    if(line_items == []):
+                        print(("Empty line in file (%s); skipping it") %
+                              (batch_file))
+                    else:
+                        # The first item in each line of the file must
+                        # be the volume id:
+                        args.volume = line_items[0]
+                        summary += _execute_single_vol_info(args)
+        except (IOError, OSError) as e:
+            print ("Error while trying to open the file: %s") % (batch_file)
+            print ("Exception: %s") % (e)
+            exit(1)
+    else:
+        if args.volume:
+            # print ("Regular (single-volume) mode requested")
+            summary = _execute_single_vol_info(args)
+        else:
+            parser.print_usage()
+            print("Error: either a volume or a batch file must be specified")
+            exit(1)
+    print("\nFinal summary:")
+    print("=" * 80)
+    print("%s" % summary)
+
+if __name__ == '__main__':
+    main()
